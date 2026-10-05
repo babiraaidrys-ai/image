@@ -1,0 +1,24 @@
+@font-face { font-family: "Inter"; src: url("../assets/fonts/Inter.ttf"); font-weight: 100 900; }
+@font-face { font-family: "MV Typewriter"; src: url("../assets/fonts/MVTypewriter-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "MV Typewriter"; src: url("../assets/fonts/MVTypewriter-Bold.ttf"); font-weight: 700; }
+@font-face { font-family: "MV MAG Round"; src: url("../assets/fonts/MvMAGRound-Bold.ttf"); font-weight: 700; }
+
+:root {
+  --bg: #F5F0E6;        /* warm white */
+  --ground: #ECE3CF;    /* plot ground */
+  --deep: #1E4A38;      /* deep green */
+  --forest: #2E6A4A;
+  --leaf: #4F8A57;
+  --leaf-lt: #86B271;
+  --teal: #1F8A8A;      /* ocean teal */
+  --teal-lt: #9AD6D0;
+  --gold: #C8A04A;
+  --ink: #22332B;
+  --muted: #6B7A70;
+}
+html, body { margin: 0; padding: 0; background: var(--bg); overflow: hidden; }
+#stage { position: relative; width: 1920px; height: 1080px; background: var(--bg); overflow: hidden; }
+svg { display: block; }
+.en { font-family: "Inter", sans-serif; }
+.dv { font-family: "MV Typewriter", sans-serif; direction: rtl; unicode-bidi: plaintext; }
+.dv-title { font-family: "MV MAG Round", "MV Typewriter", sans-serif; direction: rtl; }

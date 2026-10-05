@@ -1,0 +1,348 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../lib/style.css">
+<style>
+  #panel { position: absolute; left: 1190px; top: 150px; width: 620px; }
+  .eyebrow { font: 600 19px Inter; letter-spacing: .28em; color: var(--gold); }
+  .title { font: 600 50px/1.12 Inter; color: var(--deep); margin-top: 14px; letter-spacing: -.01em; }
+  .rule { width: 72px; height: 3px; background: var(--gold); margin: 30px 0 40px; transform-origin: left; }
+  .item { display: flex; align-items: center; height: 62px; }
+  .item svg { width: 44px; height: 44px; margin-right: 22px; overflow: visible; }
+  .item span { font: 500 26px Inter; color: var(--ink); }
+  .item small { font: 400 20px Inter; color: var(--muted); margin-left: 10px; }
+  #note { position: absolute; left: 1190px; bottom: 82px; font: 400 18px Inter; color: var(--muted); letter-spacing: .04em; }
+  .tag { font: 600 17px Inter; fill: var(--deep); }
+</style></head>
+<body><div id="stage">
+<svg id="svg" width="1920" height="1080" viewBox="0 0 1920 1080" style="position:absolute;left:0;top:0">
+  <defs>
+    <!-- all symbols drawn at radius ~10 -->
+    <g id="s-breadfruit">
+      <circle cx="2" cy="3" r="10" fill="#1E4A38" opacity=".16"/>
+      <circle r="9.6" fill="#2E6A4A"/>
+      <g fill="#4F8A57">
+        <circle cx="0" cy="-5.2" r="4.4"/><circle cx="4.9" cy="-1.8" r="4.4"/><circle cx="3.1" cy="4.3" r="4.4"/>
+        <circle cx="-3.1" cy="4.3" r="4.4"/><circle cx="-4.9" cy="-1.8" r="4.4"/>
+      </g>
+      <circle cx="-2.4" cy="-2.6" r="3.6" fill="#86B271" opacity=".6"/>
+      <circle r="9.6" fill="none" stroke="#1E4A38" stroke-width=".6" opacity=".45"/>
+    </g>
+    <g id="s-melon">
+      <g fill="#79A95F">
+        <ellipse cx="0" cy="-4.6" rx="2.6" ry="4.2"/><ellipse cx="4.4" cy="-1.4" rx="2.6" ry="4.2" transform="rotate(72 4.4 -1.4)"/>
+        <ellipse cx="2.7" cy="3.7" rx="2.6" ry="4.2" transform="rotate(144 2.7 3.7)"/><ellipse cx="-2.7" cy="3.7" rx="2.6" ry="4.2" transform="rotate(216 -2.7 3.7)"/>
+        <ellipse cx="-4.4" cy="-1.4" rx="2.6" ry="4.2" transform="rotate(288 -4.4 -1.4)"/>
+      </g>
+      <ellipse rx="3.4" ry="2.7" fill="#2C6443"/>
+      <path d="M-2.2 -1.2 Q0 -2.1 2.2 -1.2 M-2.6 .4 Q0 -.4 2.6 .4 M-2.1 1.8 Q0 1.1 2.1 1.8" stroke="#8DBF73" stroke-width=".55" fill="none"/>
+    </g>
+    <g id="s-passion">
+      <g fill="#93BA68"><circle cx="-3.2" cy="-1.6" r="4"/><circle cx="3.2" cy="-1.6" r="4"/><circle cx="0" cy="3" r="4"/></g>
+      <g fill="#5E9150" opacity=".7"><circle cx="-3.2" cy="-1.6" r="1.8"/><circle cx="3.2" cy="-1.6" r="1.8"/><circle cx="0" cy="3" r="1.8"/></g>
+      <circle cx="1.2" cy=".4" r="1.5" fill="#C8A04A"/>
+    </g>
+    <g id="s-palm">
+      <circle cx="2" cy="3" r="10" fill="#1E4A38" opacity=".14"/>
+      <g id="frond"><path d="M0 0 Q3.1 -5.2 0 -10.4 Q-3.1 -5.2 0 0Z"/></g>
+      <g fill="#2E6A4A">
+        <use href="#frond"/><use href="#frond" transform="rotate(72)"/><use href="#frond" transform="rotate(144)"/>
+        <use href="#frond" transform="rotate(216)"/><use href="#frond" transform="rotate(288)"/>
+      </g>
+      <g fill="#5E9858">
+        <use href="#frond" transform="rotate(36)"/><use href="#frond" transform="rotate(108)"/><use href="#frond" transform="rotate(180)"/>
+        <use href="#frond" transform="rotate(252)"/><use href="#frond" transform="rotate(324)"/>
+      </g>
+      <circle r="2" fill="#8A7440"/>
+    </g>
+    <g id="s-lemon">
+      <circle cx="2" cy="3" r="10" fill="#1E4A38" opacity=".15"/>
+      <circle r="9.4"/>
+      <g fill="#4F8A57" opacity=".85"><circle cx="-2.6" cy="-3" r="4.2"/><circle cx="3.4" cy="-1" r="3.6"/><circle cx="-.6" cy="3.6" r="3.8"/></g>
+      <circle cx="-3" cy="-3.4" r="2.6" fill="#86B271" opacity=".55"/>
+      <g fill="#E3BE4E"><circle cx="4.6" cy="3.4" r="1.25"/><circle cx="-4.8" cy="2.2" r="1.15"/><circle cx="1.6" cy="-6" r="1.1"/></g>
+    </g>
+    <g id="s-moringa">
+      <circle cx="2" cy="3" r="9.5" fill="#1E4A38" opacity=".12"/>
+      <g fill="#6E9E58">
+        <circle cx="0" cy="-7" r="2.6"/><circle cx="3.5" cy="-6.1" r="2.6"/><circle cx="6.1" cy="-3.5" r="2.6"/><circle cx="7" cy="0" r="2.6"/>
+        <circle cx="6.1" cy="3.5" r="2.6"/><circle cx="3.5" cy="6.1" r="2.6"/><circle cx="0" cy="7" r="2.6"/><circle cx="-3.5" cy="6.1" r="2.6"/>
+        <circle cx="-6.1" cy="3.5" r="2.6"/><circle cx="-7" cy="0" r="2.6"/><circle cx="-6.1" cy="-3.5" r="2.6"/><circle cx="-3.5" cy="-6.1" r="2.6"/>
+      </g>
+      <g fill="#9DC57F"><circle cx="0" cy="-3.2" r="2.3"/><circle cx="3" cy="-1" r="2.3"/><circle cx="1.9" cy="2.6" r="2.3"/>
+        <circle cx="-1.9" cy="2.6" r="2.3"/><circle cx="-3" cy="-1" r="2.3"/></g>
+      <circle r="1.6" fill="#2E6A4A"/>
+    </g>
+    <g id="s-pump">
+      <rect x="-9" y="-11" width="18" height="22" rx="3.5" fill="#1F8A8A"/>
+      <circle r="4" fill="none" stroke="#F5F0E6" stroke-width="1.8"/><circle r="1.4" fill="#F5F0E6"/>
+    </g>
+    <pattern id="hatchX" width="6" height="6" patternUnits="userSpaceOnUse">
+      <path d="M0 0L6 6M6 0L0 6" stroke="#8A7440" stroke-width=".8" opacity=".55"/></pattern>
+    <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse">
+      <path d="M0 6L6 0" stroke="#8A7440" stroke-width=".8" opacity=".55"/></pattern>
+    <clipPath id="plotClip"><rect x="130" y="60" width="960" height="960"/></clipPath>
+  </defs>
+  <g id="cam"><g id="plot"></g></g>
+  <g id="overlay"></g>
+</svg>
+<div id="panel">
+  <div class="eyebrow en" id="eyebrow"></div>
+  <div class="title en" id="title"></div>
+  <div class="rule" id="rule"></div>
+  <div id="legend"></div>
+</div>
+<div id="note" class="en">Indicative sample layout</div>
+</div>
+<script src="../lib/core.js"></script>
+<script src="../data/farms.js"></script>
+<script>
+const P = { x: 170, y: 100, s: 880 };            // plot box in px
+const X = (u) => P.x + u / 100 * P.s, Y = (v) => P.y + v / 100 * P.s;
+const farmId = new URLSearchParams(location.search).get("farm") || "1";
+const D = FARMS["farm" + farmId];
+
+const CONF = {
+  "1": { eyebrow: "SAMPLE FARM 01", title: "Breadfruit &amp;<br>Watermelon", tree: "s-breadfruit", r: 13.5,
+         legend: [["tree", "s-breadfruit", "Breadfruit"], ["inter", "s-melon", "Watermelon"],
+                  ["perim", "s-passion", "Passion fruit", "perimeter"], ["water", "pump", "Water pump"], ["water", "line", "Irrigation line"]] },
+  "2": { eyebrow: "SAMPLE FARM 02", title: "Coconut, Beans<br>&amp; Okra", tree: "s-palm", r: 11.5,
+         legend: [["tree", "s-palm", "Coconut palm"], ["beds-beans", "bed:beans", "Bush beans"], ["beds-okra", "bed:okra", "Okra"],
+                  ["perim", "s-passion", "Passion fruit", "perimeter"], ["water", "pump", "Water pump"], ["water", "line", "Irrigation line"]] },
+  "3": { eyebrow: "SAMPLE FARM 03", title: "Lemon", tree: "s-lemon", r: 16.5,
+         legend: [["tree", "s-lemon", "Lemon"], ["perim", "s-passion", "Passion fruit", "perimeter"],
+                  ["water", "pump", "Water pump"], ["water", "line", "Irrigation line"]] },
+  "4": { eyebrow: "SAMPLE FARM 04", title: "Moringa", tree: "s-moringa", r: 17,
+         legend: [["tree", "s-moringa", "Moringa"], ["perim", "s-passion", "Passion fruit", "perimeter"],
+                  ["water", "pump", "Water pump"], ["water", "line", "Irrigation line"],
+                  ["sup0", "fertilizer", "Fertilizer"], ["sup1", "waiting", "Waiting area"], ["sup2", "tools", "Tool store"]] },
+}[farmId];
+
+const BED = { beans: "#6E9E4C", okra: "#2F7A66" };
+document.getElementById("eyebrow").textContent = CONF.eyebrow;
+document.getElementById("title").innerHTML = CONF.title;
+
+// ---------- build plot ----------
+const plot = document.getElementById("plot");
+// boundary drawn slightly outside the planting so edge rows don't sit on the line
+const M = 2.6, B0 = X(-M), BS = P.s * (1 + 2 * M / 100);
+const ground = el("rect", { x: B0, y: Y(-M), width: BS, height: BS, fill: "#ECE3CF", rx: 3 }, plot);
+const border = el("rect", { x: B0, y: Y(-M), width: BS, height: BS, fill: "none", stroke: "#1E4A38", "stroke-width": 2.5, rx: 3 }, plot);
+const borderLen = BS * 4;
+const snap = (u) => (u < 4 ? -M : u > 96 ? 100 + M : u);
+const gBeds = el("g", {}, plot), gWaterBase = el("g", {}, plot), gInter = el("g", {}, plot),
+      gTrees = el("g", {}, plot), gPerim = el("g", {}, plot), gWater = el("g", {}, plot),
+      gFlow = el("g", {}, plot), gSup = el("g", {}, plot), gPump = el("g", {}, plot);
+
+const T = {};           // stage start times
+let cursor = 1.0;       // 1 s pre-roll of empty background
+T.border = cursor; cursor += 1.8;
+T.title = 1.4;
+
+// trees, revealed in rows (farm 3: staggered diagonal; farm 2: sweep across)
+const rand = rng(7 + +farmId);
+const rowsY = [...new Set(D.trees.map(p => p[1]))].sort((a, b) => a - b);
+const colsX = [...new Set(D.trees.map(p => p[0]))].sort((a, b) => a - b);
+T.tree = cursor;
+const treeDur = 4.2;
+const trees = D.trees.map(([u, v]) => {
+  const ri = rowsY.indexOf(v), ci = colsX.indexOf(u);
+  let d;
+  if (farmId === "2") d = (ci / colsX.length) * 0.75 + (ri / rowsY.length) * 0.25;
+  else if (farmId === "3") d = (ri / rowsY.length) * 0.8 + (ci % 2) * 0.06 + (ci / colsX.length) * 0.14;
+  else d = (ri / rowsY.length) * 0.85 + (ci / colsX.length) * 0.15;
+  const n = el("use", { href: "#" + CONF.tree }, gTrees);
+  if (farmId === "3" || farmId === "4") {
+    const k = rand();
+    if (farmId === "3") n.setAttribute("fill", ["#2E6A4A", "#2A6446", "#33704D", "#28603F"][Math.floor(k * 4)]);
+    n.dataset.rot = Math.floor(k * 360);
+  } else n.dataset.rot = Math.floor(rand() * 360);
+  return { n, x: X(u), y: Y(v), t0: T.tree + d * (treeDur - 0.6) };
+});
+cursor += treeDur + 0.2;
+
+// intercrops
+let inter = [], beds = [];
+if (D.intercrop) {
+  T.inter = cursor;
+  inter = D.intercrop.map(([u, v]) => ({ n: el("use", { href: "#s-melon" }, gInter), x: X(u), y: Y(v),
+                                         t0: T.inter + (v / 100) * 2.6 + (u / 100) * 0.3 }));
+  cursor += 3.4;
+}
+if (D.beds) {
+  for (const kind of ["beans", "okra"]) {
+    T["beds-" + kind] = cursor;
+    D.beds.filter(b => b.kind === kind).forEach(b => {
+      const r = el("rect", { x: X(b.x) - 0.6, y: Y(b.y), width: b.w / 100 * P.s + 1.2, height: b.h / 100 * P.s, rx: 3, fill: BED[kind] }, gBeds);
+      const local = kind === "beans" ? b.x / 46 : (b.x - 54) / 46;
+      beds.push({ n: r, h: b.h / 100 * P.s, y: Y(b.y), t0: cursor + local * 1.8 + (b.y / 100) * 0.5 });
+    });
+    cursor += 2.6;
+  }
+}
+
+// perimeter passion fruit, travelling along the edges
+T.perim = cursor;
+const perim = D.perimeter.map(([u, v], i) => ({ n: el("use", { href: "#s-passion" }, gPerim), x: X(snap(u)), y: Y(snap(v)),
+                                               t0: T.perim + i / D.perimeter.length * 2.4 }));
+cursor += 3.0;
+
+// pump + irrigation, drawn outward from the pump along the network
+T.water = cursor;
+const pump = el("use", { href: "#s-pump" }, gPump);
+const pumpXY = [X(-M), Y(D.pump[1])];
+const segs = D.water.map(([a, b, c, d]) => ({ a: [X(a), Y(b)], b: [X(c), Y(d)] }));
+{ // short feed pipe from the pump body to the first node of the network
+  const ends = segs.flatMap(s => [s.a, s.b]);
+  const near = ends.reduce((m, p) => Math.hypot(p[0] - pumpXY[0], p[1] - pumpXY[1]) < Math.hypot(m[0] - pumpXY[0], m[1] - pumpXY[1]) ? p : m);
+  segs.unshift({ a: [pumpXY[0] + 9, pumpXY[1]], b: [near[0], pumpXY[1]] });
+  if (Math.abs(near[1] - pumpXY[1]) > 0.5) segs.splice(1, 0, { a: [near[0], pumpXY[1]], b: near });
+}
+const key = (p) => Math.round(p[0]) + "," + Math.round(p[1]);
+const adj = {};
+segs.forEach((s, i) => { s.len = Math.hypot(s.b[0] - s.a[0], s.b[1] - s.a[1]);
+  for (const p of [s.a, s.b]) (adj[key(p)] ||= []).push(i); });
+const dist = {};
+const nodes = Object.keys(adj).map(k => k.split(",").map(Number));
+const nearest = (pts) => pts.reduce((m, p) => Math.hypot(p[0] - pumpXY[0], p[1] - pumpXY[1]) < Math.hypot(m[0] - pumpXY[0], m[1] - pumpXY[1]) ? p : m);
+let pending = nodes.slice();
+while (pending.length) {             // Dijkstra per connected component
+  const seed = nearest(pending);
+  dist[key(seed)] = Object.keys(dist).length ? Math.hypot(seed[0] - pumpXY[0], seed[1] - pumpXY[1]) : 0;
+  const q = [key(seed)];
+  while (q.length) {
+    q.sort((a, b) => dist[a] - dist[b]);
+    const k = q.shift();
+    for (const i of adj[k]) {
+      const s = segs[i], other = key(s.a) === k ? s.b : s.a, ok = key(other);
+      const nd = dist[k] + s.len;
+      if (dist[ok] === undefined || nd < dist[ok]) { dist[ok] = nd; q.push(ok); }
+    }
+  }
+  pending = pending.filter(p => dist[key(p)] === undefined);
+}
+const maxD = Math.max(...segs.map(s => Math.max(dist[key(s.a)], dist[key(s.b)])));
+const WATER_DUR = 3.2;
+segs.forEach(s => {
+  if (dist[key(s.a)] > dist[key(s.b)]) [s.a, s.b] = [s.b, s.a];   // orient away from pump
+  s.d0 = dist[key(s.a)];
+  const attrs = { x1: s.a[0], y1: s.a[1], x2: s.b[0], y2: s.b[1], "stroke-linecap": "round" };
+  s.base = el("line", { ...attrs, stroke: "#1F8A8A", "stroke-width": 3.6 }, gWater);
+  s.flow = el("line", { ...attrs, stroke: "#CFEFEA", "stroke-width": 2, "stroke-dasharray": "5 34" }, gFlow);
+});
+const joints = nodes.filter(p => adj[key(p)].length >= 2 || true).map(p => ({ n: el("circle", { cx: p[0], cy: p[1], r: 3.4, fill: "#1F8A8A" }, gWater), d: dist[key(p)] }));
+cursor += 0.4 + WATER_DUR + 0.6;
+T.flow = cursor - 0.6;
+
+// supporting areas (farm 4)
+const sup = (D.support || []).map((s, i) => {
+  const g = el("g", {}, gSup), cx = X(s.c[0]), cy = Y(s.c[1]);
+  let shape;
+  if (s.kind === "waiting") {
+    const w = s.w / 100 * P.s, h = s.h / 100 * P.s;
+    shape = el("rect", { x: cx - w / 2, y: cy - h / 2, width: w, height: h, rx: 4, fill: "url(#hatchX)", stroke: "#8A7440", "stroke-width": 1.6 }, g);
+    el("rect", { x: cx - w / 2, y: cy - h / 2, width: w, height: h, rx: 4, fill: "#F5F0E6", opacity: .55 }, g).after(shape);
+  } else {
+    el("circle", { cx, cy, r: s.r / 100 * P.s, fill: "#F5F0E6" }, g);
+    shape = el("circle", { cx, cy, r: s.r / 100 * P.s, fill: s.kind === "fertilizer" ? "url(#hatchX)" : "url(#hatch)", stroke: "#8A7440", "stroke-width": 1.6 }, g);
+  }
+  const ring = el("circle", { cx, cy, r: 30, fill: "none", stroke: "#C8A04A", "stroke-width": 2.5 }, gSup);
+  const label = ["Fertilizer", "Waiting area", "Tool store"][["fertilizer", "waiting", "tools"].indexOf(s.kind)];
+  const tagW = label.length * 10 + 30, ty = cy - 52;
+  const tag = el("g", {}, gSup);
+  el("rect", { x: cx - tagW / 2, y: ty - 17, width: tagW, height: 34, rx: 17, fill: "#F5F0E6", stroke: "#C8A04A", "stroke-width": 1.5 }, tag);
+  const tx = el("text", { x: cx, y: ty + 6, "text-anchor": "middle", class: "tag" }, tag); tx.textContent = label;
+  return { g, ring, tag, cx, cy, t0: cursor + 0.2 + i * 0.35, hl: cursor + 1.6 + i * 1.6 };
+});
+if (sup.length) { sup.forEach((s, i) => (T["sup" + i] = s.t0)); cursor += 1.6 + sup.length * 1.6 + 0.4; }
+
+// farm-specific camera / callout moments
+let ZOOM = null, CALLOUT = null;
+if (farmId === "2") { ZOOM = { t0: cursor + 0.6, cx: X(50), cy: Y(44), s: 2.3 }; cursor += 0.6 + 1.8 + 2.6 + 1.8; }
+if (farmId === "3") {
+  const tr = trees[6 * 20 + 13];
+  CALLOUT = { t0: cursor + 0.6, tree: tr, cx: 820, cy: 420, r: 190 };
+  cursor += 0.6 + 4.6;
+  const g = el("g", {}, document.getElementById("overlay"));
+  CALLOUT.dim = el("rect", { x: P.x, y: P.y, width: P.s, height: P.s, fill: "#F5F0E6", opacity: 0 }, g);
+  CALLOUT.ring = el("circle", { cx: tr.x, cy: tr.y, r: 22, fill: "none", stroke: "#C8A04A", "stroke-width": 3 }, g);
+  CALLOUT.line = el("line", { x1: tr.x, y1: tr.y, x2: CALLOUT.cx, y2: CALLOUT.cy, stroke: "#C8A04A", "stroke-width": 2 }, g);
+  CALLOUT.disk = el("circle", { cx: CALLOUT.cx, cy: CALLOUT.cy, r: CALLOUT.r, fill: "#F5F0E6", stroke: "#C8A04A", "stroke-width": 3 }, g);
+  CALLOUT.tree = tr;
+}
+const HOLD = 6;
+window.DURATION = Math.ceil(cursor + HOLD);
+
+// ---------- legend ----------
+const legend = document.getElementById("legend");
+const legendItems = CONF.legend.map(([stage, icon, label, sub]) => {
+  const d = document.createElement("div"); d.className = "item";
+  let svg = `<svg viewBox="-22 -22 44 44">`;
+  if (icon === "pump") svg += `<use href="#s-pump" transform="scale(1.4)"/>`;
+  else if (icon === "line") svg += `<line x1="-18" y1="0" x2="18" y2="0" stroke="#1F8A8A" stroke-width="4" stroke-linecap="round"/><circle r="4" fill="#1F8A8A"/>`;
+  else if (icon.startsWith("bed:")) svg += `<rect x="-14" y="-18" width="8" height="36" rx="3" fill="${BED[icon.slice(4)]}"/><rect x="5" y="-18" width="8" height="36" rx="3" fill="${BED[icon.slice(4)]}"/>`;
+  else if (icon === "fertilizer" || icon === "tools") svg += `<circle r="15" fill="url(#${icon === "tools" ? "hatch" : "hatchX"})" stroke="#8A7440" stroke-width="1.6"/>`;
+  else if (icon === "waiting") svg += `<rect x="-20" y="-9" width="40" height="18" rx="3" fill="url(#hatchX)" stroke="#8A7440" stroke-width="1.6"/>`;
+  else svg += `<use href="#${icon}" ${icon === "s-lemon" ? 'fill="#2E6A4A"' : ""} transform="scale(1.9)"/>`;
+  d.innerHTML = svg + `</svg><span>${label}</span>` + (sub ? `<small>${sub}</small>` : "");
+  legend.appendChild(d);
+  return { d, t0: T[stage] + (icon === "line" ? 0.5 : 0) };
+});
+
+// ---------- render ----------
+window.render = function (t) {
+  // border + ground
+  drawOn(border, borderLen, ease.inOut(prog(t, T.border, 1.6)));
+  ground.setAttribute("opacity", ease.out(prog(t, T.border + 0.5, 1.4)));
+  // panel
+  fadeUp(document.getElementById("eyebrow"), t, T.title);
+  fadeUp(document.getElementById("title"), t, T.title + 0.15);
+  document.getElementById("rule").style.transform = `scaleX(${ease.out(prog(t, T.title + 0.4, 0.8))})`;
+  legendItems.forEach(it => fadeUp(it.d, t, it.t0, 0.7, 10));
+  document.getElementById("note").style.opacity = ease.out(prog(t, T.title + 0.8, 1));
+
+  trees.forEach(o => { growIn(o.n, o.x, o.y, t, o.t0, 0.7, CONF.r / 10);
+    o.n.setAttribute("transform", o.n.getAttribute("transform") + ` rotate(${o.n.dataset.rot})`); });
+  inter.forEach(o => growIn(o.n, o.x, o.y, t, o.t0, 0.5, 0.62));
+  beds.forEach(o => { const k = ease.out(prog(t, o.t0, 0.6));
+    o.n.setAttribute("height", o.h * k); o.n.setAttribute("opacity", k); });
+  perim.forEach(o => growIn(o.n, o.x, o.y, t, o.t0, 0.5, 1.0));
+
+  // pump then network
+  growIn(pump, pumpXY[0], pumpXY[1], t, T.water, 0.5, 1.15);
+  const tw = (t - T.water - 0.4) / WATER_DUR * maxD;
+  segs.forEach(s => { const k = clamp((tw - s.d0) / s.len);
+    s.base.setAttribute("x2", lerp(s.a[0], s.b[0], k)); s.base.setAttribute("y2", lerp(s.a[1], s.b[1], k));
+    s.base.setAttribute("opacity", k > 0 ? 1 : 0);
+    s.flow.setAttribute("stroke-dashoffset", -((t - T.flow) * 46) - s.d0);
+    s.flow.setAttribute("opacity", 0.9 * ease.out(prog(t, T.flow, 1.2))); });
+  joints.forEach(j => j.n.setAttribute("opacity", tw >= j.d ? 1 : 0));
+
+  // supporting areas + sequential highlight
+  sup.forEach(s => { const k = ease.out(prog(t, s.t0, 0.6));
+    s.g.setAttribute("opacity", k); s.g.setAttribute("transform", `translate(${s.cx} ${s.cy}) scale(${0.7 + 0.3 * k}) translate(${-s.cx} ${-s.cy})`);
+    const h = prog(t, s.hl, 1.4), on = ease.out(prog(t, s.hl, 0.4));
+    s.ring.setAttribute("r", 26 + 10 * ease.out(h)); s.ring.setAttribute("opacity", h > 0 && h < 1 ? (1 - h) * 0.9 : 0);
+    fadeUp(s.tag, t, s.hl, 0.5, 6); s.tag.style.transformBox = "fill-box"; });
+
+  // farm 2: gentle close-up and return
+  const cam = document.getElementById("cam");
+  if (ZOOM) {
+    const k = ease.inOut(prog(t, ZOOM.t0, 1.8)) - ease.inOut(prog(t, ZOOM.t0 + 1.8 + 2.6, 1.8));
+    const s = 1 + (ZOOM.s - 1) * k, tx = (P.x + P.s / 2 - ZOOM.cx) * k, ty = (P.y + P.s / 2 - ZOOM.cy) * k;
+    cam.setAttribute("transform", `translate(${P.x + P.s / 2} ${P.y + P.s / 2}) scale(${s}) translate(${-(P.x + P.s / 2) + tx} ${-(P.y + P.s / 2) + ty})`);
+    cam.setAttribute("clip-path", k > 0 ? "url(#plotClip)" : "");
+  }
+  // farm 3: one tree highlighted, circular area reserved for real crop footage
+  if (CALLOUT) {
+    const c = CALLOUT, a = ease.out(prog(t, c.t0, 0.6)), b = ease.inOut(prog(t, c.t0 + 0.5, 0.8)),
+          out = ease.inOut(prog(t, c.t0 + 4.0, 0.8)), on = (k) => k * (1 - out);
+    c.dim.setAttribute("opacity", on(a) * 0.55);
+    c.ring.setAttribute("opacity", on(a)); c.ring.setAttribute("r", 18 + 6 * a);
+    c.line.setAttribute("x2", lerp(c.tree.x, c.cx, b)); c.line.setAttribute("y2", lerp(c.tree.y, c.cy, b));
+    c.line.setAttribute("opacity", on(b));
+    c.disk.setAttribute("r", c.r * ease.out(prog(t, c.t0 + 1.0, 0.8))); c.disk.setAttribute("opacity", on(1));
+  }
+};
+window.render(0);
+</script>
+</body></html>

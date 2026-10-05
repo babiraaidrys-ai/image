@@ -1,0 +1,136 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../lib/style.css">
+<style>
+  .lbl { position: absolute; white-space: nowrap; font: 700 34px "MV Typewriter"; color: var(--deep); direction: rtl;
+         padding: 6px 16px 10px; background: rgba(245,240,230,.92); border-radius: 26px; border: 1.5px solid rgba(200,160,74,.7); }
+  #panel { position: absolute; right: 150px; top: 170px; width: 560px; text-align: right; direction: rtl; }
+  #big { font: 700 150px/1 "MV MAG Round"; color: var(--deep); }
+  #big b { font: 600 150px/1 Inter; font-weight: 600; margin-left: 26px; }
+  #rule { width: 90px; height: 4px; background: var(--gold); margin: 34px 0 30px auto; transform-origin: right; }
+  .row { font: 400 31px/1.62 "MV Typewriter"; color: var(--ink); }
+  .row i { font-style: normal; display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--gold); margin-left: 16px; vertical-align: middle; }
+</style></head>
+<body><div id="stage">
+<svg id="svg" width="1920" height="1080" style="position:absolute;left:0;top:0">
+  <g id="geo"><g id="reefHalo"></g><g id="reef"></g><g id="land"></g></g>
+  <g id="marks"></g>
+  <g id="inset"><rect id="insetBg" rx="10" fill="#F5F0E6" stroke="#1E4A38" stroke-opacity=".25"/><g id="insetGeo"></g>
+    <rect id="insetView" fill="none" stroke="#C8A04A" stroke-width="2"/><g id="insetMarks"></g></g>
+</svg>
+<div id="labels"></div>
+<div id="panel"><div id="big"><b>10</b>ރަށް</div><div id="rule"></div><div id="list"></div></div>
+</div>
+<script src="../lib/core.js"></script>
+<script src="../data/maldives.js"></script>
+<script>
+const C = { x: 820, y: 540 };                          // screen anchor for camera centre
+const U = 1000;                                        // geo units per degree
+const geo = document.getElementById("geo");
+const gx = (lon) => (lon - 73) * U, gy = (lat) => -lat * U;
+
+// ---- islands (geoBoundaries ADM0, OSM-derived) + soft atoll glow derived from them ----
+const path = (rings) => rings.map(r => "M" + r.map(([lo, la]) => gx(lo).toFixed(1) + " " + gy(la).toFixed(1)).join("L") + "Z").join("");
+const reefs = MV.glow.map(poly => {
+  const lat = poly[0].reduce((s, p) => s + p[1], 0) / poly[0].length;
+  return { line: el("path", { d: path(poly), fill: "#A8D6CF", "fill-rule": "evenodd", stroke: "#5FB3AC", "stroke-width": 1.2, "stroke-opacity": .6, "vector-effect": "non-scaling-stroke" }, document.getElementById("reef")), lat };
+});
+const gS = el("g", {}, document.getElementById("reef"));
+MV.glowS.forEach(poly => el("path", { d: path(poly), fill: "#A8D6CF", "fill-rule": "evenodd", stroke: "#5FB3AC", "stroke-width": 1.2, "stroke-opacity": .7, "vector-effect": "non-scaling-stroke" }, gS));
+MV.land.forEach(p => el("path", { d: path([p]), fill: "#24573F", stroke: "#24573F", "stroke-width": .6, "vector-effect": "non-scaling-stroke" }, document.getElementById("land")));
+
+// ---- camera keyframes: [time, lat, lon, px-per-degree] ----
+const FULL = [3.2, 73.22, 118];
+const beat = 2.2;
+const CAM = [
+  [0, ...FULL], [3.6, ...FULL],
+  [5.4, 6.12, 73.12, 330], [9.8, 6.12, 73.12, 330],          // north: Baarah, Inguraidhoo
+  [11.6, 3.95, 73.48, 300], [18.2, 3.95, 73.48, 300],        // central: Kaashidhoo, Maafushi, Veyvah
+  [20.4, 0.36, 73.29, 640], [29.0, 0.36, 73.29, 640],        // Gaafu: GA + three GDh islands
+  [30.6, 1.92, 73.42, 420], [33.0, 1.92, 73.42, 420],        // Laamu: Fonadhoo
+  [35.2, ...FULL],
+];
+function camera(t) {
+  let i = 0; while (i < CAM.length - 1 && t >= CAM[i + 1][0]) i++;
+  if (i === CAM.length - 1) return CAM[i].slice(1);
+  const [t0, a1, b1, k1] = CAM[i], [t1, a2, b2, k2] = CAM[i + 1];
+  const e = ease.inOut(clamp((t - t0) / (t1 - t0)));
+  // interpolate zoom in log space so moves feel even
+  return [lerp(a1, a2, e), lerp(b1, b2, e), Math.exp(lerp(Math.log(k1), Math.log(k2), e))];
+}
+const project = (lat, lon, cam) => [C.x + (lon - cam[1]) * cam[2], C.y + (cam[0] - lat) * cam[2]];
+
+// ---- islands: reveal times follow narration order, label side per island ----
+const SIDE = ["r", "r", "r", "r", "r", "r", "l", "bl", "br", "r"];
+const REVEAL = [5.7, 7.9, 11.9, 14.1, 16.3, 20.7, 22.9, 25.1, 27.3, 30.9];
+const EXIT = [9.8, 9.8, 18.2, 18.2, 18.2, 29.0, 29.0, 29.0, 29.0, 33.0];
+const marks = document.getElementById("marks"), labels = document.getElementById("labels");
+const isl = MV.islands.map(([en, dv, lat, lon], i) => {
+  const g = el("g", {}, marks);
+  const pulse = el("circle", { r: 10, fill: "none", stroke: "#C8A04A", "stroke-width": 2.5 }, g);
+  el("circle", { r: 10.5, fill: "#C8A04A", stroke: "#F5F0E6", "stroke-width": 3.5 }, g);
+  const lbl = document.createElement("div"); lbl.className = "lbl"; lbl.textContent = dv; labels.appendChild(lbl);
+  return { en, dv, lat, lon, g, pulse, lbl, t0: REVEAL[i], exit: EXIT[i], side: SIDE[i] };
+});
+
+// ---- overview inset ----
+const INSET = { x: 1690, y: 90, k: 40, lat: 7.35, lon: 72.55, w: 76, h: 0 };
+INSET.h = (7.35 + 0.85) * INSET.k;
+const ip = (lat, lon) => [INSET.x + (lon - INSET.lon) * INSET.k, INSET.y + (INSET.lat - lat) * INSET.k];
+const insetBg = document.getElementById("insetBg");
+Object.entries({ x: INSET.x - 14, y: INSET.y - 14, width: (73.85 - 72.55) * INSET.k + 28, height: INSET.h + 28 }).forEach(([k, v]) => insetBg.setAttribute(k, v));
+MV.glow.forEach(poly => el("path", { d: poly.map(r => "M" + r.map(([lo, la]) => ip(la, lo).map(n => n.toFixed(1)).join(" ")).join("L") + "Z").join(""),
+  fill: "#A8D6CF", "fill-rule": "evenodd" }, document.getElementById("insetGeo")));
+const insetDots = isl.map(o => el("circle", { cx: ip(o.lat, o.lon)[0], cy: ip(o.lat, o.lon)[1], r: 2.6, fill: "#C8A04A" }, document.getElementById("insetMarks")));
+
+// ---- final panel ----
+const list = document.getElementById("list");
+const rows = isl.map(o => { const d = document.createElement("div"); d.className = "row"; d.innerHTML = `<i></i>${o.dv}`; list.appendChild(d); return d; });
+const T_TITLE = 35.6;
+window.DURATION = 44;
+
+window.render = function (t) {
+  const cam = camera(t), z = cam[2] / FULL[2];
+  geo.setAttribute("transform", `translate(${C.x} ${C.y}) scale(${cam[2] / U}) translate(${-gx(cam[1])} ${-gy(cam[0])})`);
+  reefs.forEach(r => {
+    const k = ease.out(prog(t, 1.0 + (7.2 - r.lat) / 8 * 1.6, 1.0));
+    r.line.setAttribute("opacity", 0.75 * k * (1 - clamp((z - 1.6) / 1.4)));
+  });
+  gS.setAttribute("opacity", 0.85 * clamp((z - 1.6) / 1.4));
+  document.getElementById("land").setAttribute("opacity", ease.out(prog(t, 1.6, 1.4)));
+
+  isl.forEach((o, i) => {
+    const [x, y] = project(o.lat, o.lon, cam);
+    const k = ease.out(prog(t, o.t0, 0.6));
+    o.g.setAttribute("transform", `translate(${x} ${y}) scale(${(0.5 + 0.5 * k) * (t > 33 ? lerp(1, 0.8, prog(t, 33, 2)) : 1)})`);
+    o.g.setAttribute("opacity", k);
+    // two gentle pulses on reveal, then rest
+    const p = ((t - o.t0) % 1.1) / 1.1, live = t > o.t0 && t < o.t0 + 2.2;
+    o.pulse.setAttribute("r", 10 + 22 * ease.out(p)); o.pulse.setAttribute("opacity", live ? (1 - p) * 0.8 : 0);
+    // label
+    const a = ease.out(prog(t, o.t0 + 0.2, 0.6)) * (1 - ease.out(prog(t, o.exit, 0.6)));
+    const w = o.lbl.offsetWidth, h = o.lbl.offsetHeight;
+    let lx = x + 26, ly = y - h / 2;
+    if (o.side === "l") lx = x - 26 - w;
+    if (o.side === "bl") { lx = x - w + 24; ly = y + 26; }
+    if (o.side === "br") { lx = x - 24; ly = y + 26; }
+    o.lbl.style.left = lx + "px"; o.lbl.style.top = ly + (1 - a) * 8 + "px"; o.lbl.style.opacity = a;
+    insetDots[i].setAttribute("opacity", k);
+  });
+
+  // inset with current view rectangle, only while zoomed in
+  const ia = clamp((z - 1.4) / 0.8);
+  document.getElementById("inset").setAttribute("opacity", ia);
+  const v0 = ip(cam[0] + C.y / cam[2], cam[1] - C.x / cam[2]), v1 = ip(cam[0] - (1080 - C.y) / cam[2], cam[1] + (1920 - C.x) / cam[2]);
+  const vx0 = Math.max(v0[0], INSET.x - 10), vx1 = Math.min(v1[0], INSET.x + (73.85 - 72.55) * INSET.k + 10);
+  const iv = document.getElementById("insetView");
+  iv.setAttribute("x", vx0); iv.setAttribute("y", v0[1]); iv.setAttribute("width", Math.max(0, vx1 - vx0)); iv.setAttribute("height", v1[1] - v0[1]);
+
+  // final title + list
+  const big = document.getElementById("big"); fadeUp(big, t, T_TITLE, 1.0, 20);
+  document.getElementById("rule").style.transform = `scaleX(${ease.out(prog(t, T_TITLE + 0.5, 0.8))})`;
+  rows.forEach((r, i) => fadeUp(r, t, T_TITLE + 0.9 + i * 0.12, 0.6, 8));
+};
+window.render(0);
+</script>
+</body></html>
