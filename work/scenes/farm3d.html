@@ -1,0 +1,390 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../lib/style.css">
+<style>
+  #stage { background: radial-gradient(120% 90% at 50% 38%, #FBF4E4 0%, #EFE3C8 55%, #D9CBA8 100%); }
+  canvas { position: absolute; left: 0; top: 0; }
+  #head { position: absolute; left: 96px; top: 78px; }
+  .eyebrow { font: 600 20px Inter; letter-spacing: .3em; color: #B8862F; }
+  .title { font: 700 58px/1.08 Inter; color: #12352B; margin-top: 12px; letter-spacing: -.015em; }
+  .rule { width: 80px; height: 4px; background: #D9A441; margin-top: 24px; transform-origin: left; }
+  .pin { position: absolute; white-space: nowrap; font: 600 24px Inter; color: #12352B; padding: 9px 20px 10px 16px;
+         background: rgba(255,252,244,.94); border-radius: 30px; box-shadow: 0 6px 22px rgba(30,40,30,.18); display: flex; align-items: center; }
+  .pin i { width: 12px; height: 12px; border-radius: 50%; margin-right: 11px; display: inline-block; }
+  .stem { position: absolute; width: 2px; background: rgba(255,252,244,.95); box-shadow: 0 0 6px rgba(0,0,0,.15); transform-origin: top; }
+  #note { position: absolute; right: 96px; bottom: 64px; font: 500 19px Inter; color: #5D6B5E; letter-spacing: .05em; }
+  #callout { position: absolute; border-radius: 50%; border: 5px solid #D9A441; background: rgba(251,244,228,.0); box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+</style></head>
+<body><div id="stage">
+<div id="head"><div class="eyebrow" id="eyebrow"></div><div class="title" id="title"></div><div class="rule" id="rule"></div></div>
+<div id="pins"></div>
+<div id="callout" style="opacity:0"></div>
+<div id="note">Indicative sample layout</div>
+</div>
+<script src="../lib/core.js"></script>
+<script src="../data/farms.js"></script>
+<script type="importmap">{ "imports": { "three": "../node_modules/three/build/three.module.js" } }</script>
+<script type="module">
+import * as THREE from "three";
+
+const farmId = new URLSearchParams(location.search).get("farm") || "1";
+const D = FARMS["farm" + farmId];
+const W = 1920, H = 1080;
+
+// ---------------- theme ----------------
+const C = {
+  grass: "#7FA85A", soil: "#8B6440", soilDark: "#5E4128", sand: "#E9DAB4",
+  leafDeep: "#2D6A3A", leaf: "#3F8445", leafLt: "#79B25A", trunk: "#6B4A2E",
+  teal: "#1595A0", tealLt: "#8EF0E8", gold: "#D9A441", stone: "#CFC6B2",
+};
+const CONF = {
+  "1": { eyebrow: "SAMPLE FARM 01", title: "Breadfruit &amp; Watermelon" },
+  "2": { eyebrow: "SAMPLE FARM 02", title: "Coconut, Beans &amp; Okra" },
+  "3": { eyebrow: "SAMPLE FARM 03", title: "Lemon" },
+  "4": { eyebrow: "SAMPLE FARM 04", title: "Moringa" },
+}[farmId];
+document.getElementById("eyebrow").textContent = CONF.eyebrow;
+document.getElementById("title").innerHTML = CONF.title;
+
+// ---------------- renderer / scene ----------------
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(W, H);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.getElementById("stage").prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(26, W / H, 1, 2000);
+scene.add(new THREE.HemisphereLight("#FFF4DD", "#6E8B55", 1.35));
+const sun = new THREE.DirectionalLight("#FFE6BF", 2.4);
+sun.position.set(-70, 130, 55);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -80, right: 80, top: 80, bottom: -80, near: 10, far: 400 });
+sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.35; sun.shadow.radius = 3;
+scene.add(sun);
+
+const rng1 = rng(11 + +farmId);
+const X = (u) => u - 50, Z = (v) => v - 50;
+const M = 2.6;                                  // boundary margin (m) outside the planting
+
+// ---------------- diorama base ----------------
+function noiseTex(base, spots, n, size = 1024) {
+  const c = document.createElement("canvas"); c.width = c.height = size;
+  const g = c.getContext("2d"); g.fillStyle = base; g.fillRect(0, 0, size, size);
+  const r = rng(5);
+  for (let i = 0; i < n; i++) { g.fillStyle = spots[Math.floor(r() * spots.length)]; g.globalAlpha = 0.25 + r() * 0.35;
+    g.beginPath(); g.arc(r() * size, r() * size, 1 + r() * 3.5, 0, 7); g.fill(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+const S = 100 + 2 * M, BASE = S + 8;
+const topMat = new THREE.MeshStandardMaterial({ map: noiseTex("#86AD5E", ["#6E9A4A", "#9BBE6C", "#7BA453", "#A7C778"], 26000), roughness: .95 });
+const sideMat = new THREE.MeshStandardMaterial({ map: noiseTex("#8B6440", ["#6E4E31", "#A07A52", "#7A5638"], 9000), roughness: 1 });
+const base = new THREE.Mesh(new THREE.BoxGeometry(BASE, 6, BASE), [sideMat, sideMat, topMat, sideMat, sideMat, sideMat]);
+base.position.y = -3; base.receiveShadow = true; scene.add(base);
+// plot surface (slightly different tone inside the boundary)
+const plotMat = new THREE.MeshStandardMaterial({ map: noiseTex("#93B466", ["#7FA455", "#A6C477", "#8AAE5C", "#B4CB86"], 30000), roughness: .95, transparent: true });
+const plot = new THREE.Mesh(new THREE.PlaneGeometry(S, S), plotMat);
+plot.rotation.x = -Math.PI / 2; plot.position.y = 0.02; plot.receiveShadow = true; scene.add(plot);
+
+// boundary curb: four segments that grow around the plot
+const curbMat = new THREE.MeshStandardMaterial({ color: C.sand, roughness: .9 });
+const corners = [[-S / 2, -S / 2], [S / 2, -S / 2], [S / 2, S / 2], [-S / 2, S / 2]];
+const curbs = corners.map((a, i) => {
+  const b = corners[(i + 1) % 4];
+  const m = new THREE.Mesh(new THREE.BoxGeometry(1, 0.6, 0.9), curbMat);
+  m.castShadow = m.receiveShadow = true; scene.add(m);
+  return { m, a, b, len: S + 0.9 };
+});
+
+// ---------------- instanced helpers ----------------
+const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), tmpP = new THREE.Vector3();
+const groups = [];   // each: { parts:[{mesh, local}], items:[{x,z,rot,s,t0,dur}] }
+function part(geo, color, local = new THREE.Matrix4(), opts = {}) {
+  return { geo, mat: new THREE.MeshStandardMaterial({ color: opts.vary ? "#ffffff" : color, roughness: opts.rough ?? .8, metalness: 0, flatShading: opts.flat ?? false }), local, color: opts.vary };
+}
+function addGroup(parts, items, growDur = 0.8) {
+  const g = { items, dur: growDur, parts: parts.map(p => {
+    const mesh = new THREE.InstancedMesh(p.geo, p.mat, items.length);
+    mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
+    if (p.color) items.forEach((it, i) => mesh.setColorAt(i, new THREE.Color(p.color[Math.floor(rng1() * p.color.length)])));
+    scene.add(mesh); return { mesh, local: p.local };
+  }) };
+  groups.push(g); return g;
+}
+const L = (x, y, z, sx = 1, sy = sx, sz = sx, rx = 0, ry = 0, rz = 0) =>
+  new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(sx, sy, sz));
+const sphere = new THREE.IcosahedronGeometry(1, 2), sphereLo = new THREE.IcosahedronGeometry(1, 1);
+const cyl = new THREE.CylinderGeometry(1, 1, 1, 10);
+const cone = new THREE.ConeGeometry(1, 1, 8);
+const box = new THREE.BoxGeometry(1, 1, 1);
+
+// ---------------- crop models (metres, slightly exaggerated for a miniature read) ----------------
+const MODELS = {
+  breadfruit: [
+    part(cyl, C.trunk, L(0, 1.4, 0, .38, 2.8, .38)),
+    part(sphere, "#3B7D3F", L(0, 4.2, 0, 2.2, 1.9, 2.2), { vary: ["#3B7D3F", "#367539", "#418645"] }),
+    part(sphere, "#4C9047", L(1.0, 3.7, .6, 1.6, 1.35, 1.6)),
+    part(sphere, "#4C9047", L(-.9, 3.85, -.7, 1.65, 1.4, 1.65)),
+    part(sphere, "#6BAA55", L(-.25, 5.1, .25, 1.15, .95, 1.15)),
+  ],
+  melon: [
+    part(sphere, "#6FAF4E", L(0, .15, 0, 1.5, .42, 1.5), { vary: ["#6FAF4E", "#79B856", "#64A346"] }),
+    part(sphere, "#2C6A34", L(.55, .4, .35, .62, .48, .82, 0, .6, 0)),
+  ],
+  palm: [
+    part(cyl, "#8A6B48", L(.25, 3.1, 0, .2, 6.2, .2, 0, 0, -.08)),
+    ...[0, 1, 2, 3, 4, 5, 6].map(i => part(box, i % 2 ? "#3D8A3F" : "#2F7535",
+      new THREE.Matrix4().compose(new THREE.Vector3(.5, 6.1, 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, i / 7 * Math.PI * 2, -.38, "YXZ")), new THREE.Vector3(1, 1, 1))
+        .multiply(L(1.5, 0, 0, 3.0, .07, .62)))),
+    part(sphere, "#6B7A2E", L(.5, 5.8, 0, .45)),
+  ],
+  lemon: [
+    part(cyl, C.trunk, L(0, .6, 0, .16, 1.2, .16)),
+    part(sphere, C.leaf, L(0, 2.1, 0, 1.85, 1.65, 1.85), { vary: ["#3C7F43", "#357640", "#438A49", "#2F6E3B"] }),
+    part(sphere, "#5C9D52", L(-.5, 2.7, .4, 1.0, .8, 1.0)),
+    part(sphereLo, "#F2C94C", L(1.35, 2.0, .9, .2)), part(sphereLo, "#F2C94C", L(-1.2, 1.7, 1.1, .2)),
+    part(sphereLo, "#F2C94C", L(.4, 2.6, -1.5, .2)), part(sphereLo, "#F2C94C", L(-.9, 2.4, -1.2, .19)),
+  ],
+  moringa: [
+    part(cyl, "#8C7355", L(0, 1.3, 0, .1, 2.6, .1)),
+    part(sphereLo, "#7BB35A", L(0, 3.1, 0, 1.0, .75, 1.0), { flat: true, vary: ["#7BB35A", "#86BC63", "#6FA850"] }),
+    part(sphereLo, "#8FC46A", L(.9, 2.7, .3, .75, .55, .75), { flat: true }),
+    part(sphereLo, "#6FA850", L(-.8, 2.8, -.4, .8, .6, .8), { flat: true }),
+    part(sphereLo, "#8FC46A", L(.2, 2.6, -.95, .7, .5, .7), { flat: true }),
+    part(sphereLo, "#7BB35A", L(-.3, 2.5, 1.0, .7, .5, .7), { flat: true }),
+  ],
+  passion: [
+    part(box, "#7A5A3A", L(0, .95, 0, .12, 1.9, .12)),
+    part(sphereLo, "#6FAA45", L(0, 1.55, 0, .9, .7, .9), { flat: true, vary: ["#6FAA45", "#79B34E", "#62A03E"] }),
+    part(sphereLo, "#5E2B5C", L(.55, 1.2, .35, .16)), part(sphereLo, "#5E2B5C", L(-.45, 1.35, -.4, .15)),
+  ],
+};
+
+// ---------------- timeline ----------------
+const T = {}; let cursor = 1.0;
+T.border = cursor; cursor += 1.8;
+T.title = 1.2;
+
+// trees
+const rowsV = [...new Set(D.trees.map(p => p[1]))].sort((a, b) => a - b);
+const colsU = [...new Set(D.trees.map(p => p[0]))].sort((a, b) => a - b);
+const treeModel = { "1": "breadfruit", "2": "palm", "3": "lemon", "4": "moringa" }[farmId];
+T.tree = cursor; const treeDur = 4.6;
+addGroup(MODELS[treeModel], D.trees.map(([u, v]) => {
+  const ri = rowsV.indexOf(v), ci = colsU.indexOf(u);
+  const d = farmId === "2" ? (ci / colsU.length) * .75 + (ri / rowsV.length) * .25
+          : farmId === "3" ? (ri / rowsV.length) * .8 + (ci % 2) * .06 + (ci / colsU.length) * .14
+          : (ri / rowsV.length) * .85 + (ci / colsU.length) * .15;
+  return { x: X(u), z: Z(v), rot: rng1() * 6.28, s: .92 + rng1() * .16, t0: T.tree + d * (treeDur - .8) };
+}), 0.9);
+cursor += treeDur + .3;
+
+if (D.intercrop) {
+  T.inter = cursor;
+  addGroup(MODELS.melon, D.intercrop.map(([u, v]) => ({ x: X(u), z: Z(v), rot: rng1() * 6.28, s: .9 + rng1() * .2, t0: T.inter + v / 100 * 2.8 + u / 100 * .3 })), .6);
+  cursor += 3.6;
+}
+let beds = [];
+if (D.beds) {
+  const bedSoil = new THREE.MeshStandardMaterial({ color: "#7A5638", roughness: 1 });
+  for (const kind of ["beans", "okra"]) {
+    T["beds-" + kind] = cursor;
+    const list = D.beds.filter(b => b.kind === kind);
+    const plants = [];
+    list.forEach(b => {
+      const t0 = cursor + (kind === "beans" ? b.x / 46 : (b.x - 54) / 46) * 1.9 + b.y / 100 * .5;
+      const m = new THREE.Mesh(box, bedSoil); m.receiveShadow = true; scene.add(m);
+      beds.push({ m, x: X(b.x + b.w / 2), z: Z(b.y), len: b.h, t0 });
+      for (let k = .5; k < b.h; k += .75) plants.push({ x: X(b.x + b.w / 2), z: Z(b.y + k), rot: rng1() * 6.28, s: .85 + rng1() * .3, t0: t0 + .3 + k / b.h * .5 });
+    });
+    addGroup(kind === "beans"
+      ? [part(sphereLo, "#86C25A", L(0, .42, 0, .42, .4, .42), { flat: true, vary: ["#86C25A", "#7AB651", "#93CB66"] })]
+      : [part(cone, "#2F7A4A", L(0, .75, 0, .36, 1.5, .36), { flat: true, vary: ["#2F7A4A", "#2A6F43", "#358451"] })], plants, .5);
+    cursor += 2.8;
+  }
+}
+
+// perimeter passion fruit on a trellis
+T.perim = cursor;
+const snap = (u) => (u < 4 ? -M : u > 96 ? 100 + M : u);
+const perimPts = D.perimeter.map(([u, v]) => [X(snap(u)), Z(snap(v))]);
+addGroup(MODELS.passion, perimPts.map(([x, z], i) => ({ x, z, rot: rng1() * 6.28, s: 1, t0: T.perim + i / perimPts.length * 2.4 })), .6);
+cursor += 3.0;
+
+// pump + irrigation network (drawn outward from the pump)
+T.water = cursor;
+const pumpPos = [X(-M), Z(D.pump[1])];
+const pump = new THREE.Group();
+const pad = new THREE.Mesh(box, new THREE.MeshStandardMaterial({ color: C.stone, roughness: .9 })); pad.scale.set(3.2, .3, 3.2); pad.position.y = .15;
+const body = new THREE.Mesh(box, new THREE.MeshStandardMaterial({ color: C.teal, roughness: .45 })); body.scale.set(1.8, 1.5, 1.3); body.position.y = 1.05;
+const motor = new THREE.Mesh(cyl, new THREE.MeshStandardMaterial({ color: "#E8EEF0", roughness: .4 })); motor.scale.set(.5, 1.2, .5); motor.rotation.z = Math.PI / 2; motor.position.set(0, 1.2, 0);
+[pad, body, motor].forEach(m => { m.castShadow = m.receiveShadow = true; pump.add(m); });
+pump.position.set(pumpPos[0] + 1.6, 0, pumpPos[1]); pump.userData.s = 1.7; scene.add(pump);
+
+const segs = D.water.map(([a, b, c, d]) => ({ a: [X(a), Z(b)], b: [X(c), Z(d)] }));
+{ const ends = segs.flatMap(s => [s.a, s.b]);
+  const near = ends.reduce((m, p) => Math.hypot(p[0] - pumpPos[0], p[1] - pumpPos[1]) < Math.hypot(m[0] - pumpPos[0], m[1] - pumpPos[1]) ? p : m);
+  segs.unshift({ a: [pumpPos[0] + 2.5, pumpPos[1]], b: [near[0], pumpPos[1]] });
+  if (Math.abs(near[1] - pumpPos[1]) > .3) segs.splice(1, 0, { a: [near[0], pumpPos[1]], b: near }); }
+const key = (p) => p[0].toFixed(1) + "," + p[1].toFixed(1);
+const adj = {}; segs.forEach((s, i) => { s.len = Math.hypot(s.b[0] - s.a[0], s.b[1] - s.a[1]); for (const p of [s.a, s.b]) (adj[key(p)] ||= []).push(i); });
+const dist = {}; let pending = Object.keys(adj).map(k => k.split(",").map(Number));
+const dp = (p) => Math.hypot(p[0] - pumpPos[0], p[1] - pumpPos[1]);
+while (pending.length) {
+  const seed = pending.reduce((m, p) => dp(p) < dp(m) ? p : m);
+  dist[key(seed)] = Object.keys(dist).length ? dp(seed) : 0;
+  const q = [key(seed)];
+  while (q.length) { q.sort((a, b) => dist[a] - dist[b]); const k = q.shift();
+    for (const i of adj[k]) { const s = segs[i], o = key(s.a) === k ? s.b : s.a, nd = dist[k] + s.len;
+      if (dist[key(o)] === undefined || nd < dist[key(o)]) { dist[key(o)] = nd; q.push(key(o)); } } }
+  pending = pending.filter(p => dist[key(p)] === undefined);
+}
+const pipeMat = new THREE.MeshStandardMaterial({ color: C.teal, roughness: .35, metalness: .05 });
+const pipeGeo = new THREE.CylinderGeometry(.24, .24, 1, 10); pipeGeo.rotateZ(Math.PI / 2); pipeGeo.translate(.5, 0, 0);
+segs.forEach(s => {
+  if (dist[key(s.a)] > dist[key(s.b)]) [s.a, s.b] = [s.b, s.a];
+  s.d0 = dist[key(s.a)];
+  s.m = new THREE.Mesh(pipeGeo, pipeMat); s.m.castShadow = true;
+  s.m.position.set(s.a[0], .3, s.a[1]); s.m.rotation.y = -Math.atan2(s.b[1] - s.a[1], s.b[0] - s.a[0]);
+  scene.add(s.m);
+});
+const maxD = Math.max(...segs.map(s => s.d0 + s.len));
+const WATER_DUR = 3.4;
+// flowing water beads
+const BEADS_PER = 60;
+const beadMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.32, 1), new THREE.MeshBasicMaterial({ color: C.tealLt }), segs.length * 0 + Math.ceil(maxD / 6) * 6 + 400);
+beadMesh.frustumCulled = false; scene.add(beadMesh);
+cursor += .4 + WATER_DUR + .6;
+T.flow = cursor - .6;
+
+// farm 4: supporting areas as simple pads (no invented buildings)
+const sup = (D.support || []).map((s, i) => {
+  const isRect = s.kind === "waiting";
+  const m = new THREE.Mesh(isRect ? box : cyl, new THREE.MeshStandardMaterial({ color: { fertilizer: "#C9A66B", tools: "#B9B2A2", waiting: "#E2D6BC" }[s.kind], roughness: .9 }));
+  if (isRect) m.scale.set(s.w, .35, s.h); else m.scale.set(s.r, .35, s.r);
+  m.position.set(X(s.c[0]), .18, Z(s.c[1])); m.receiveShadow = m.castShadow = true; scene.add(m);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1, .09, 8, 64), new THREE.MeshBasicMaterial({ color: C.gold, transparent: true }));
+  ring.rotation.x = -Math.PI / 2; ring.position.set(X(s.c[0]), .5, Z(s.c[1])); scene.add(ring);
+  return { m, ring, s, t0: cursor + .2 + i * .35, hl: cursor + 1.6 + i * 1.6, base: isRect ? Math.max(s.w, s.h) * .6 : s.r * 1.4 };
+});
+if (sup.length) { sup.forEach((s, i) => T["sup" + i] = s.t0); cursor += 1.6 + sup.length * 1.6 + .4; }
+
+// farm-specific moments
+let ZOOM = null, CALLOUT = null;
+if (farmId === "2") { ZOOM = { t0: cursor + .4, x: 0, z: -6 }; cursor += .4 + 2.0 + 2.6 + 2.0; }
+if (farmId === "3") { const [u, v] = D.trees[6 * 20 + 13]; CALLOUT = { t0: cursor + .4, x: X(u), z: Z(v) }; cursor += .4 + 4.8; }
+
+// final rise to overhead, then hold
+T.rise = cursor; cursor += 3.4;
+window.DURATION = Math.ceil(cursor + 5);
+
+// ---------------- labels (English, pinned to 3D points) ----------------
+const pinsEl = document.getElementById("pins");
+const LBL = [];
+const near = (list, u, v) => list.reduce((m, p) => Math.hypot(p[0] - u, p[1] - v) < Math.hypot(m[0] - u, m[1] - v) ? p : m);
+function label(text, dot, world, t0, h = 70) {
+  const p = document.createElement("div"); p.className = "pin"; p.innerHTML = `<i style="background:${dot}"></i>${text}`;
+  const st = document.createElement("div"); st.className = "stem"; pinsEl.append(st, p);
+  LBL.push({ p, st, world: new THREE.Vector3(...world), t0, h });
+}
+const treeName = { "1": "Breadfruit", "2": "Coconut palm", "3": "Lemon", "4": "Moringa" }[farmId];
+const topY = { "1": 6.2, "2": 7, "3": 3.8, "4": 3.6 }[farmId];
+{ const p = near(D.trees, 28, 58); label(treeName, C.leafDeep, [X(p[0]), topY, Z(p[1])], T.tree + 1.6, 90); }
+if (D.intercrop) { const p = near(D.intercrop, 70, 84); label("Watermelon", "#5E9A45", [X(p[0]), .6, Z(p[1])], T.inter + 1.6, 80); }
+if (D.beds) {
+  const bb = (kind, u) => D.beds.filter(b => b.kind === kind).reduce((m, b) => Math.hypot(b.x - u, b.y - 72) < Math.hypot(m.x - u, m.y - 72) ? b : m);
+  const b1 = bb("beans", 22), b2 = bb("okra", 78);
+  label("Bush beans", "#86C25A", [X(b1.x + b1.w / 2), .8, Z(b1.y + b1.h / 2)], T["beds-beans"] + 1.2, 80);
+  label("Okra", "#2F7A4A", [X(b2.x + b2.w / 2), 1.4, Z(b2.y + b2.h / 2)], T["beds-okra"] + 1.2, 80);
+}
+{ const p = near(perimPts, X(-M), Z(22)); label("Passion fruit", "#5E2B5C", [p[0], 2.2, p[1]], T.perim + 1.2, 70); }
+label("Water pump", C.teal, [pump.position.x, 2, pump.position.z], T.water + .4, 80);
+{ const s = segs.reduce((m, s) => { const d = (q) => Math.hypot((q.a[0] + q.b[0]) / 2 - X(62), (q.a[1] + q.b[1]) / 2 - Z(30)); return d(s) < d(m) ? s : m; });
+  label("Irrigation line", C.teal, [(s.a[0] + s.b[0]) / 2, .5, (s.a[1] + s.b[1]) / 2], T.water + 1.8, 60); }
+sup.forEach(o => label({ fertilizer: "Fertilizer", tools: "Tool store", waiting: "Waiting area" }[o.s.kind], C.gold, [o.m.position.x, .6, o.m.position.z], o.hl, 70));
+
+// ---------------- camera path ----------------
+function camAt(t) {
+  // [elevation deg, azimuth deg, distance, target x, target z]
+  let e = lerp(30, 42, ease.sine(prog(t, 0, T.rise))), a = lerp(-30, -14, ease.sine(prog(t, 0, T.rise))), r = lerp(320, 285, ease.sine(prog(t, 0, T.rise)));
+  let tx = -22, tz = 6;
+  if (ZOOM) { const k = ease.inOut(prog(t, ZOOM.t0, 2)) - ease.inOut(prog(t, ZOOM.t0 + 4.6, 2));
+    r = lerp(r, 92, k); e = lerp(e, 34, k); tx = lerp(tx, ZOOM.x, k); tz = lerp(tz, ZOOM.z, k); }
+  if (CALLOUT) { const k = ease.inOut(prog(t, CALLOUT.t0, 1.6)) - ease.inOut(prog(t, CALLOUT.t0 + 3.4, 1.4));
+    r = lerp(r, 120, k); tx = lerp(tx, CALLOUT.x, k); tz = lerp(tz, CALLOUT.z, k); }
+  const k = ease.inOut(prog(t, T.rise, 3.4));
+  e = lerp(e, 86, k); a = lerp(a, 0, k); r = lerp(r, 300, k); tz = lerp(tz, 3, k); tx = lerp(tx, -44, k);
+  const er = e * Math.PI / 180, ar = a * Math.PI / 180;
+  camera.position.set(tx + r * Math.cos(er) * Math.sin(ar), r * Math.sin(er), tz + r * Math.cos(er) * Math.cos(ar));
+  camera.lookAt(tx, 0, tz);
+}
+
+// ---------------- render ----------------
+const v3 = new THREE.Vector3();
+window.render = function (t) {
+  camAt(t);
+  // curbs grow around the boundary, one side after another
+  curbs.forEach((c, i) => { const k = ease.inOut(clamp((prog(t, T.border, 1.6) * 4) - i));
+    const lx = c.b[0] - c.a[0], lz = c.b[1] - c.a[1], len = Math.max(.001, k * c.len);
+    c.m.visible = k > 0; c.m.scale.set(Math.abs(lx) > 1 ? len : 1, 1, Math.abs(lz) > 1 ? len : 1);
+    c.m.position.set(c.a[0] + Math.sign(lx) * len / 2 * (Math.abs(lx) > 1), .3, c.a[1] + Math.sign(lz) * len / 2 * (Math.abs(lz) > 1)); });
+  plotMat.opacity = ease.out(prog(t, T.border + .4, 1.4));
+
+  for (const g of groups) {
+    g.items.forEach((it, i) => {
+      const k = ease.out(prog(t, it.t0, g.dur));
+      const sc = Math.max(1e-4, k) * it.s;
+      for (const p of g.parts) {
+        tmpM.compose(tmpP.set(it.x, 0, it.z), tmpQ.setFromAxisAngle(v3.set(0, 1, 0), it.rot), tmpS.set(sc, Math.max(1e-4, ease.out(prog(t, it.t0, g.dur * .8))) * it.s, sc)).multiply(p.local);
+        p.mesh.setMatrixAt(i, tmpM);
+      }
+    });
+    g.parts.forEach(p => p.mesh.instanceMatrix.needsUpdate = true);
+  }
+  beds.forEach(b => { const k = ease.out(prog(t, b.t0, .7)); b.m.visible = k > 0;
+    b.m.scale.set(.75, .32, Math.max(.01, b.len * k)); b.m.position.set(b.x, .16, b.z + b.len * k / 2); });
+
+  // pump pops in, pipes extend from it
+  const pk = ease.out(prog(t, T.water, .6)); pump.scale.setScalar(Math.max(1e-4, pk) * 1.7); pump.visible = pk > 0;
+  const tw = (t - T.water - .4) / WATER_DUR * maxD;
+  segs.forEach(s => { const k = clamp((tw - s.d0) / s.len); s.m.visible = k > 0; s.m.scale.set(Math.max(.001, s.len * k), 1, 1); });
+  // water beads travel along the network once it is complete
+  let n = 0; const fl = ease.out(prog(t, T.flow, 1.2));
+  if (fl > 0) segs.forEach(s => { for (let d = ((t - T.flow) * 9 - s.d0) % 6; d < s.len; d += 6) { if (d < 0) continue;
+    const f = d / s.len; tmpM.compose(tmpP.set(lerp(s.a[0], s.b[0], f), .3, lerp(s.a[1], s.b[1], f)), tmpQ.identity(), tmpS.setScalar(fl));
+    if (n < beadMesh.count) beadMesh.setMatrixAt(n++, tmpM); } });
+  for (let i = n; i < beadMesh.count; i++) beadMesh.setMatrixAt(i, tmpM.makeScale(0, 0, 0));
+  beadMesh.instanceMatrix.needsUpdate = true;
+
+  sup.forEach(o => { const k = ease.out(prog(t, o.t0, .6)); o.m.visible = k > 0; o.m.position.y = .18 - (1 - k) * .4;
+    const h = prog(t, o.hl, 1.6); o.ring.visible = h > 0 && h < 1; o.ring.scale.setScalar(o.base * (1 + .8 * ease.out(h))); o.ring.material.opacity = (1 - h) * .95; });
+
+  renderer.render(scene, camera);
+
+  // overlays
+  fadeUp(document.getElementById("eyebrow"), t, T.title); fadeUp(document.getElementById("title"), t, T.title + .15);
+  document.getElementById("rule").style.transform = `scaleX(${ease.out(prog(t, T.title + .4, .8))})`;
+  document.getElementById("note").style.opacity = ease.out(prog(t, T.title + .8, 1));
+  LBL.forEach(l => {
+    v3.copy(l.world).project(camera);
+    const x = (v3.x + 1) / 2 * W, y = (1 - v3.y) / 2 * H, a = ease.out(prog(t, l.t0, .6));
+    const w = l.p.offsetWidth, ph = l.p.offsetHeight, top = y - l.h - ph;
+    l.p.style.left = (x - w / 2) + "px"; l.p.style.top = (top + (1 - a) * 10) + "px"; l.p.style.opacity = a;
+    l.st.style.left = (x - 1) + "px"; l.st.style.top = (y - l.h) + "px"; l.st.style.height = l.h + "px";
+    l.st.style.opacity = a; l.st.style.transform = `scaleY(${a})`;
+  });
+  if (CALLOUT) {
+    const el = document.getElementById("callout"); v3.set(CALLOUT.x, 2, CALLOUT.z).project(camera);
+    const k = ease.out(prog(t, CALLOUT.t0 + 1.2, .7)) * (1 - ease.inOut(prog(t, CALLOUT.t0 + 3.6, .8)));
+    const R = 230 * k; el.style.width = el.style.height = 2 * R + "px";
+    el.style.left = ((v3.x + 1) / 2 * W + 320 - R) + "px"; el.style.top = ((1 - v3.y) / 2 * H - 120 - R) + "px"; el.style.opacity = k > .01 ? 1 : 0;
+  }
+};
+window.render(0);
+</script>
+</body></html>

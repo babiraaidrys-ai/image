@@ -8,14 +8,24 @@ const path = require("path");
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const [scene, query = ""] = args[0].split("?");
-const url = "file://" + path.resolve(__dirname, "scenes", scene) + (query ? "?" + query : "");
+// serve the work dir over http so ES modules (three.js) load
+const http = require("http"), fs = require("fs");
+const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".ttf": "font/ttf", ".png": "image/png", ".json": "application/json", ".jpg": "image/jpeg" };
+const server = http.createServer((req, res) => {
+  const f = path.join(__dirname, decodeURIComponent(req.url.split("?")[0]));
+  fs.readFile(f, (e, d) => { if (e) { res.writeHead(404); return res.end(); }
+    res.writeHead(200, { "Content-Type": MIME[path.extname(f)] || "application/octet-stream" }); res.end(d); });
+}).listen(0);
+const url = () => `http://127.0.0.1:${server.address().port}/scenes/${scene}` + (query ? "?" + query : "");
 const fps = +opt("--fps", 25), out = opt("--out", "out/test"), scale = +opt("--scale", 2);
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--ignore-gpu-blocklist", "--disable-accelerated-2d-canvas"] });
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: scale });
+  page.setDefaultTimeout(180000);
   page.on("pageerror", (e) => console.error("PAGE ERROR", e.message));
-  await page.goto(url);
+  await page.goto(url(), { timeout: 180000 });
+  await page.waitForFunction(() => window.DURATION !== undefined, null, { timeout: 120000 });
   await page.evaluate(() => document.fonts.ready);
   const dur = await page.evaluate(() => window.DURATION);
   console.log("duration", dur);
@@ -40,4 +50,5 @@ const fps = +opt("--fps", 25), out = opt("--out", "out/test"), scale = +opt("--s
     await new Promise((r) => ff.on("close", r));
   }
   await browser.close();
+  server.close();
 })();

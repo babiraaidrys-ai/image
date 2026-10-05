@@ -1,0 +1,18 @@
+{
+  "name": "work",
+  "version": "1.0.0",
+  "description": "Animated scenes are HTML/SVG pages in `scenes/`, rendered frame-by-frame to MP4 by `render.js` (Playwright + ffmpeg, 25 fps; `--scale 2` = 3840×2160).",
+  "main": "render.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.169.0"
+  }
+}
