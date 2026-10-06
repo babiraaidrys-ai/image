@@ -15,7 +15,7 @@
   .pin small { font: 500 17px Inter; color: #8FE9FF; margin-left: 10px; }
   .unused { position: absolute; width: 2px; background: linear-gradient(#8FE9FF, rgba(143,233,255,.5)); transform-origin: top; box-shadow: 0 0 6px rgba(110,227,255,.8); }
   .node { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: #BFF4FF; box-shadow: 0 0 10px 3px rgba(110,227,255,.85); }
-  #note { position: absolute; left: 96px; bottom: 64px; font: 500 19px Inter; color: #8BA6B8; letter-spacing: .05em; }
+  #note { position: absolute; left: 96px; bottom: 64px; font: 500 19px Inter; color: #EAF6FF; text-shadow: 0 2px 8px rgba(0,0,0,.7); letter-spacing: .05em; }
   #callout { position: absolute; border-radius: 50%; border: 5px solid #E7B54B; box-shadow: 0 0 40px rgba(231,181,75,.45); }
 </style></head>
 <body><div id="stage">
@@ -61,51 +61,13 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.getElementById("stage").prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
-{ // Maldivian dusk: sunset sky, calm sea, low islands with palms on the horizon
-  const c = document.createElement("canvas"); c.width = 1920; c.height = 1080; const g = c.getContext("2d");
-  const HZ = 800;                                           // horizon line
-  const sky = g.createLinearGradient(0, 0, 0, HZ);
-  sky.addColorStop(0, "#0A1430"); sky.addColorStop(.35, "#1E2F5E"); sky.addColorStop(.62, "#5B4B7E");
-  sky.addColorStop(.82, "#C9708A"); sky.addColorStop(.94, "#F09A63"); sky.addColorStop(1, "#F8C27A");
-  g.fillStyle = sky; g.fillRect(0, 0, 1920, HZ);
-  const r = rng(4);
-  for (let i = 0; i < 160; i++) { g.fillStyle = "#fff"; g.globalAlpha = (.1 + r() * .5) * (1 - i / 160 * .3); g.fillRect(r() * 1920, r() * 360, 1.6, 1.6); }
-  g.globalAlpha = 1;
-  // soft sun glow just above the horizon
-  const sx = 300, sy = HZ - 18;
-  let gl = g.createRadialGradient(sx, sy, 0, sx, sy, 420);
-  gl.addColorStop(0, "rgba(255,226,170,.95)"); gl.addColorStop(.08, "rgba(255,196,120,.75)"); gl.addColorStop(.35, "rgba(240,140,100,.25)"); gl.addColorStop(1, "rgba(240,140,100,0)");
-  g.fillStyle = gl; g.fillRect(0, 0, 1920, HZ);
-  // thin clouds lit from below
-  for (let i = 0; i < 9; i++) { const cy = 520 + r() * 220, cx = r() * 1920, w = 220 + r() * 420;
-    g.fillStyle = `rgba(255,${150 + r() * 60 | 0},${120 + r() * 40 | 0},${.12 + r() * .12})`; g.beginPath(); g.ellipse(cx, cy, w, 6 + r() * 8, 0, 0, 7); g.fill(); }
-  // sea
-  const sea = g.createLinearGradient(0, HZ, 0, 1080);
-  sea.addColorStop(0, "#4E5C86"); sea.addColorStop(.15, "#2B4467"); sea.addColorStop(1, "#0B1B2C");
-  g.fillStyle = sea; g.fillRect(0, HZ, 1920, 280);
-  // sun reflection on the water
-  for (let y = HZ + 2; y < 1080; y += 4) { const k = (y - HZ) / 280, w = 30 + k * 260;
-    g.fillStyle = `rgba(255,${190 - k * 60 | 0},120,${(.55 - k * .5) * (.5 + r() * .5)})`; g.fillRect(sx - w / 2 + (r() - .5) * 40 * k, y, w * (.3 + r() * .7), 1.6); }
-  // low Maldivian islands: turquoise lagoon halo, white sand rim, green canopy, palm silhouettes
-  function island(cx, w, seed) {
-    const q = rng(seed), y = HZ + 2;
-    g.fillStyle = "rgba(90,200,200,.35)"; g.beginPath(); g.ellipse(cx, y + 3, w * .75, 7, 0, 0, 7); g.fill();
-    g.fillStyle = "#F3E3C3"; g.beginPath(); g.ellipse(cx, y, w * .52, 3.2, 0, 0, 7); g.fill();
-    g.fillStyle = "#1C3A34"; g.beginPath(); g.moveTo(cx - w * .48, y - 1);
-    for (let x = -w * .48; x <= w * .48; x += 6) g.lineTo(cx + x, y - 9 - 7 * Math.sin((x / w + .5) * Math.PI) - q() * 4);
-    g.lineTo(cx + w * .48, y - 1); g.fill();
-    const n = Math.max(2, Math.round(w / 26));
-    for (let i = 0; i < n; i++) { const px = cx - w * .4 + (w * .8) * (i + q() * .6) / n, h = 22 + q() * 16, lean = (q() - .5) * 10;
-      g.strokeStyle = "#13261F"; g.lineWidth = 2; g.beginPath(); g.moveTo(px, y - 6); g.quadraticCurveTo(px + lean * .4, y - h * .6, px + lean, y - h); g.stroke();
-      g.fillStyle = "#13261F";
-      for (let f = 0; f < 6; f++) { const ang = -Math.PI / 2 + (f - 2.5) * .55; g.beginPath(); g.ellipse(px + lean + Math.cos(ang) * 7, y - h + Math.sin(ang) * 4 + 3, 8, 1.8, ang, 0, 7); g.fill(); } }
-  }
-  island(140, 130, 1); island(420, 70, 2); island(1180, 90, 3); island(1820, 160, 4); island(1660, 46, 5);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; scene.background = t;
+{ // backdrop: blurred aerial photo of a Maldivian island farm (supplied by the client)
+  const t = await new THREE.TextureLoader().loadAsync("../assets/backdrop_blur.jpg");
+  t.colorSpace = THREE.SRGBColorSpace; scene.background = t;
 }
 const camera = new THREE.PerspectiveCamera(30, W / H, 1, 3000);
 scene.add(new THREE.HemisphereLight("#BFD8FF", "#2C3E2C", 1.25));
-const sun = new THREE.DirectionalLight("#FFD9B0", 2.3);
+const sun = new THREE.DirectionalLight("#FFF1DC", 2.5);
 sun.position.set(-120, 110, 70); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -90, right: 90, top: 90, bottom: -90, near: 10, far: 500 });
 sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.35; scene.add(sun);
