@@ -261,10 +261,21 @@ if (D.beds) {
   }
 }
 T.perim = cursor;
-const snap = (u) => (u < 4 ? -M : u > 96 ? 100 + M : u);
-const perimPts = D.perimeter.map(([u, v]) => [X(snap(u)), Z(snap(v))]);
-addGroup(MODELS.passion, perimPts.map(([x, z], i) => ({ x, z, rot: rng1() * 6.28, s: 1, t0: T.perim + i / perimPts.length * 2.2 })), .6);
-cursor += 2.8;
+const hedgePts = [];
+{ const path = [[GATE[1] + 1, zFront - 1.2], [xR - 1.2, zFront - 1.2], [xR - 1.2, zBack + 1.2], [xL + 1.2, zBack + 1.2], [xL + 1.2, zFront - 1.2], [GATE[0] - 1, zFront - 1.2]];
+  let acc = 0; const segL = []; for (let i = 1; i < path.length; i++) segL.push(Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]));
+  const total = segL.reduce((x, y) => x + y, 0);
+  for (let i = 1; i < path.length; i++) { const [a0, b0] = [path[i - 1], path[i]], L0 = segL[i - 1];
+    for (let d = 0; d < L0; d += 1.15) { hedgePts.push({ x: a0[0] + (b0[0] - a0[0]) * d / L0, z: a0[1] + (b0[1] - a0[1]) * d / L0, f: (acc + d) / total }); } acc += L0; } }
+const perimPts = hedgePts.map(p => [p.x, p.z]);
+addGroup([
+  part(box, "#6B5038", L(0, 1.4, 0, .1, 2.8, .1)),                                                    // trellis post
+  part(sphereLo, "", L(0, 1.9, 0, 1.0, 1.35, .75), { flat: true, vary: ["#4E9A3A", "#5BA845", "#447F33", "#62AE4A"] }),
+  part(sphereLo, "", L(.3, 1.0, .05, .85, .95, .7), { flat: true, vary: ["#3F8A33", "#4C9A3C", "#58A646"] }),
+  part(sphereLo, "", L(-.25, 2.75, 0, .7, .55, .6), { flat: true, vary: ["#6BB552", "#5FA848"] }),
+  part(sphereLo, "#B39BE6", L(.45, 2.2, .55, .13)), part(sphereLo, "#5E2B5C", L(-.4, 1.4, .55, .16)), part(sphereLo, "#E8D45A", L(.2, .9, -.6, .12)),
+], hedgePts.map(p => ({ x: p.x, z: p.z, rot: rng1() * 6.28, s: .9 + rng1() * .25, t0: T.perim + p.f * 2.4 })), .6);
+cursor += 3.0;
 
 // pump + glowing irrigation network
 T.water = cursor;
@@ -402,7 +413,7 @@ if (D.beds) {
   label("Bush beans", "#9BE06A", [X(b1.x + b1.w / 2), .8, Z(b1.y + b1.h / 2)], T["beds-beans"] + 1.2, 80);
   label("Okra", "#3FBF7A", [X(b2.x + b2.w / 2), 1.4, Z(b2.y + b2.h / 2)], T["beds-okra"] + 1.2, 80);
 }
-{ const p = near(perimPts, X(-M), Z(18)); label("Passion fruit", "#C77DDB", [p[0], 2.2, p[1]], T.perim + 1.2, 70); }
+{ const p = near(perimPts, X(-M), Z(18)); label("Passion fruit fence", "#C77DDB", [p[0], 3.4, p[1]], T.perim + 1.2, 70); }
 label("Water pump", GLOW, [pump.position.x, 2.4, pump.position.z], T.water + .4, 90);
 { const s = segs.reduce((m, s) => { const d = (q) => Math.hypot((q.a[0] + q.b[0]) / 2 - X(55), (q.a[1] + q.b[1]) / 2 - Z(14)); return d(s) < d(m) ? s : m; });
   label("Irrigation line", GLOW, [(s.a[0] + s.b[0]) / 2, .6, (s.a[1] + s.b[1]) / 2], T.water + 1.8, 60); }
@@ -412,7 +423,10 @@ cams.forEach((c, i) => label("CCTV camera", "#FF6B6B", [corners[i][0], 5.4, corn
 sup.forEach(o => label({ fertilizer: "Fertilizer", tools: "Tool store", waiting: "Waiting area" }[o.s.kind], "#E7B54B", [o.m.position.x, .6, o.m.position.z], o.hl, 70));
 
 // ---------------- camera ----------------
+const CAMQ = new URLSearchParams(location.search).get("cam");
 function camAt(t) {
+  if (CAMQ) { const [e, a, r, tx, tz] = CAMQ.split(",").map(Number); const er = e * Math.PI / 180, ar = a * Math.PI / 180;
+    camera.position.set(tx + r * Math.cos(er) * Math.sin(ar), r * Math.sin(er), tz + r * Math.cos(er) * Math.cos(ar)); camera.lookAt(tx, 0, tz); return; }
   const q = ease.sine(prog(t, 0, window.DURATION || 40));
   let e = lerp(31, 28, q), a = lerp(-30, -19, q), r = lerp(268, 244, q), tx = 2, tz = zMid + 2;
   if (ZOOM) { const k = ease.inOut(prog(t, ZOOM.t0, 2)) - ease.inOut(prog(t, ZOOM.t0 + 4.6, 2)); r = lerp(r, 92, k); e = lerp(e, 30, k); tx = lerp(tx, ZOOM.x, k); tz = lerp(tz, ZOOM.z, k); }
@@ -509,6 +523,7 @@ window.render = function (t) {
     el.style.width = el.style.height = 2 * R + "px"; el.style.left = ((v3.x + 1) / 2 * W + 320 - R) + "px"; el.style.top = ((1 - v3.y) / 2 * H - 120 - R) + "px"; el.style.opacity = k > .01 ? 1 : 0;
   }
 };
+if (new URLSearchParams(location.search).get("hud") === "0") document.querySelectorAll("#head,#pins,#leaders,#note").forEach(e => e.style.display = "none");
 window.render(0);
 </script>
 </body></html>
