@@ -1,0 +1,89 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../lib/style.css">
+<style>
+  #stage { background: #0B1A22; }
+  #img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; will-change: transform; }
+  #head { position: absolute; left: 96px; bottom: 84px; }
+  .eyebrow { font: 600 20px Inter; letter-spacing: .3em; color: #9EEBFF; text-shadow: 0 2px 10px rgba(0,0,0,.7); }
+  .title { font: 700 58px/1.08 Inter; color: #FFFFFF; margin-top: 10px; letter-spacing: -.015em; text-shadow: 0 4px 24px rgba(0,0,0,.65); }
+  .rule { width: 80px; height: 4px; background: #E7B54B; margin-top: 20px; transform-origin: left; }
+  #shade { position: absolute; left: 0; bottom: 0; width: 1100px; height: 360px; background: radial-gradient(120% 100% at 0% 100%, rgba(0,0,0,.55), rgba(0,0,0,0) 70%); }
+  .pin { position: absolute; white-space: nowrap; color: #fff; padding: 9px 18px 10px 14px; border-radius: 10px;
+         background: rgba(6,22,38,.82); border: 1.5px solid rgba(110,227,255,.85); box-shadow: 0 0 18px rgba(80,210,255,.35);
+         display: flex; align-items: center; font: 600 23px Inter; }
+  .pin i { width: 11px; height: 11px; border-radius: 50%; margin-right: 11px; display: inline-block; box-shadow: 0 0 8px currentColor; }
+  .pin small { font: 500 17px Inter; color: #8FE9FF; margin-left: 10px; }
+  .node { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: #BFF4FF; box-shadow: 0 0 10px 3px rgba(110,227,255,.85); }
+</style></head>
+<body><div id="stage">
+<img id="img">
+<div id="shade"></div>
+<svg id="leaders" width="1920" height="1080" style="position:absolute;left:0;top:0"></svg>
+<div id="pins"></div>
+<div id="head"><div class="eyebrow">SAMPLE FARM 01</div><div class="title">Breadfruit &amp; Watermelon</div><div class="rule" id="rule"></div></div>
+</div>
+<script src="../lib/core.js"></script>
+<script>const FARM = new URLSearchParams(location.search).get("farm") || "farm1"; document.write(`<script src="../data/${FARM}_track.js"><\/script>`);</script>
+<script>
+const W = 1920, H = 1080, FPS = 25, S0 = TRACK.orbit_start / FPS;
+// [text, dot, track key, delay after orbit start, stem height (negative = below), x offset, sub]
+const COMMON_A = [
+  ["Entrance", "#E7B54B", "entrance", 0.4, 70, 0],
+  ["Entrance shed", "#5FE0FF", "entrance_shed", 1.0, 90, -60, "Solar panel roof"],
+  ["Storage shed", "#5FE0FF", "storage_shed", 1.6, 100, 40, "Solar panel roof"],
+];
+const COMMON_B = [
+  ["Irrigation line", "#5FE0FF", "irrigation", 3.6, 60, -40],
+  ["Water pump", "#5FE0FF", "pump", 4.2, -50, -110],
+  ["Passion fruit fence", "#C77DDB", "fence", 4.8, 80, 90],
+  ["CCTV camera", "#FF6B6B", "cctv1", 5.6, 90, 90],
+  ["CCTV camera", "#FF6B6B", "cctv2", 5.9, 70, -60],
+  ["CCTV camera", "#FF6B6B", "cctv3", 6.2, 120, -40],
+  ["CCTV camera", "#FF6B6B", "cctv4", 6.5, 130, 60],
+];
+const CROPS = {
+  farm1: { eyebrow: "SAMPLE FARM 01", title: "Breadfruit &amp; Watermelon", labels: [
+    ["Breadfruit", "#6BCB5A", "breadfruit", 2.4, 80, 0], ["Watermelon", "#8BD66A", "watermelon", 3.0, 70, 40]] },
+  farm2: { eyebrow: "SAMPLE FARM 02", title: "Coconut, Beans &amp; Okra", labels: [
+    ["Coconut palm", "#6BCB5A", "palm", 2.4, -60, 40], ["Bush beans", "#9BE06A", "beans", 2.8, -50, 60], ["Okra", "#3FBF7A", "okra", 3.2, 80, 0]] },
+}[FARM];
+document.querySelector(".eyebrow").textContent = CROPS.eyebrow;
+document.querySelector(".title").innerHTML = CROPS.title;
+const LABELS = [...COMMON_A, ...CROPS.labels, ...COMMON_B];
+const pins = document.getElementById("pins"), leaders = document.getElementById("leaders");
+const L = LABELS.map(([text, dot, key, dt, h, dx, sub]) => {
+  const p = document.createElement("div"); p.className = "pin"; p.innerHTML = `<i style="background:${dot};color:${dot}"></i>${text}` + (sub ? `<small>${sub}</small>` : "");
+  const nd = document.createElement("div"); nd.className = "node";
+  const ln = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+  ln.setAttribute("fill", "none"); ln.setAttribute("stroke", "#8FE9FF"); ln.setAttribute("stroke-width", "2"); ln.style.filter = "drop-shadow(0 0 4px rgba(110,227,255,.9))";
+  leaders.appendChild(ln); pins.append(nd, p);
+  return { p, nd, ln, key, t0: S0 + dt, h, dx };
+});
+window.DURATION = TRACK.frames / FPS;
+const img = document.getElementById("img");
+window.render = async function (t) {
+  const f = Math.min(TRACK.frames - 1, Math.round(t * FPS));
+  img.src = `../out/${FARM}seq/${String(f).padStart(4, "0")}.jpg`; await img.decode();
+  const k = f - TRACK.orbit_start;
+  L.forEach(l => {
+    const a = k >= 0 ? ease.out(prog(t, l.t0, .6)) : 0;
+    if (a <= 0) { l.p.style.opacity = l.nd.style.opacity = l.ln.style.opacity = 0; return; }
+    const [x, y] = TRACK.track[l.key][k];
+    const w = l.p.offsetWidth, ph = l.p.offsetHeight;
+    let px = x - w / 2 + l.dx, py = (l.h < 0 ? y - l.h : y - l.h - ph) + (1 - a) * 10;
+    if (py < 16) py = y + 26;
+    px = Math.min(W - w - 16, Math.max(16, px));
+    const ax = Math.min(px + w - 12, Math.max(px + 12, x)), ay = py < y ? py + ph : py;
+    const vis = x > 0 && x < W && y > 0 && y < H ? 1 : 0;
+    l.p.style.left = px + "px"; l.p.style.top = py + "px";
+    l.p.style.opacity = l.nd.style.opacity = l.ln.style.opacity = a * vis;
+    l.nd.style.left = x + "px"; l.nd.style.top = y + "px";
+    l.ln.setAttribute("points", `${x},${y} ${ax},${ay}`);
+  });
+  fadeUp(document.querySelector(".eyebrow"), t, .8); fadeUp(document.querySelector(".title"), t, .95);
+  document.getElementById("rule").style.transform = `scaleX(${ease.out(prog(t, 1.2, .8))})`;
+};
+window.render(0);
+</script>
+</body></html>
