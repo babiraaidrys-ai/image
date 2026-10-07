@@ -49,10 +49,17 @@ const CROPS = {
     ["Coconut palm", "#6BCB5A", "palm", 2.4, -60, 40], ["Bush beans", "#9BE06A", "beans", 2.8, -50, 60], ["Okra", "#3FBF7A", "okra", 3.2, 80, 0]] },
   farm3: { eyebrow: "SAMPLE FARM 03", title: "Lemon", labels: [
     ["Lemon", "#F2C94C", "lemon", 2.6, 80, 0]] },
+  farm4: { eyebrow: "SAMPLE FARM 04", title: "Moringa", labels: [
+    ["Moringa", "#8FD06A", "moringa", 2.6, 80, 0]] },
 }[FARM];
 document.querySelector(".eyebrow").textContent = CROPS.eyebrow;
 document.querySelector(".title").innerHTML = CROPS.title;
 const LABELS = [...COMMON_A, ...CROPS.labels, ...COMMON_B].map(l => l.slice());
+if (FARM === "farm4") LABELS.forEach(l => {
+  if (l[2] === "entrance_shed") l[6] = "Solar roof · waiting area";
+  if (l[2] === "storage_shed") { l[6] = "Solar roof · tools &amp; fertilizer"; l[5] = -120; }
+  if (l[2] === "cctv3") { l[4] = -60; l[5] = -40; }
+});
 if (FARM === "farm3") LABELS.forEach(l => { if (l[2] === "cctv3") { l[4] = -60; l[5] = -40; } });
 const pins = document.getElementById("pins"), leaders = document.getElementById("leaders");
 const L = LABELS.map(([text, dot, key, dt, h, dx, sub]) => {
