@@ -1,0 +1,261 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../lib/style.css">
+<style>
+  #stage { background: radial-gradient(120% 120% at 50% 40%, #12463E 0%, #0C3029 45%, #071C18 100%); }
+  #grid { position: absolute; inset: 0; opacity: .5;
+          background-image: linear-gradient(rgba(95,224,255,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(95,224,255,.07) 1px, transparent 1px);
+          background-size: 80px 80px; mask-image: radial-gradient(70% 70% at 50% 50%, #000 30%, transparent 100%); }
+  #vig { position: absolute; inset: 0; background: radial-gradient(80% 80% at 50% 50%, transparent 55%, rgba(0,0,0,.45) 100%); }
+  svg { position: absolute; left: 0; top: 0; overflow: visible; }
+  .ln { fill: none; stroke: #6FE3FF; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px rgba(95,224,255,.7)); }
+  .gd { fill: none; stroke: #E7B54B; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px rgba(231,181,75,.6)); }
+  .gr { fill: none; stroke: #8FE07A; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px rgba(143,224,122,.6)); }
+  .fillg { fill: rgba(143,224,122,.18); }
+  .fillc { fill: rgba(95,224,255,.10); }
+  .t { position: absolute; color: #fff; direction: rtl; text-align: center; white-space: nowrap; transform-origin: center; }
+  .h1 { font: 700 84px/1.25 "MV MAG Round", "MV Typewriter"; text-shadow: 0 4px 24px rgba(0,0,0,.45); }
+  .h2 { font: 700 46px/1.5 "MV Typewriter"; color: #F4F1E8; }
+  .h3 { font: 700 36px/1.5 "MV Typewriter"; color: #BFEFFF; }
+  .gold { color: #E7B54B; }
+  .num { font: 700 190px/1 Inter; color: #fff; direction: ltr; letter-spacing: -.02em; text-shadow: 0 6px 40px rgba(231,181,75,.35); }
+  .numS { font: 700 120px/1 Inter; color: #fff; direction: ltr; }
+  .card { position: absolute; border-radius: 22px; background: rgba(6,28,26,.55); border: 2px solid rgba(110,227,255,.55);
+          box-shadow: 0 0 30px rgba(80,210,255,.18), inset 0 0 40px rgba(95,224,255,.05); }
+  .rule { position: absolute; height: 5px; background: #E7B54B; border-radius: 3px; transform-origin: center; }
+  .pill { position: absolute; padding: 10px 26px 14px; border-radius: 40px; border: 2px solid #E7B54B; color: #E7B54B; font: 700 30px "MV Typewriter"; direction: rtl; white-space: nowrap; }
+</style></head>
+<body><div id="stage"><div id="grid"></div><div id="vig"></div>
+<div id="back"></div>
+<svg id="svg" width="1920" height="1080"></svg>
+<div id="txt"></div></div>
+<script src="../lib/core.js"></script>
+<script>
+const ID = +(new URLSearchParams(location.search).get("id") || 1);
+const svg = document.getElementById("svg"), txtEl = document.getElementById("txt");
+const A = [];   // animations: { t0, dur, f(k) }
+const at = (t0, dur, f) => A.push({ t0, dur, f });
+
+// ---------- primitives ----------
+function path(d, cls, t0, dur = 1.0, parent = svg) {
+  const p = el("path", { d, class: cls }, parent);
+  const L = p.getTotalLength(); p.style.strokeDasharray = L; p.style.strokeDashoffset = L;
+  at(t0, dur, k => { p.style.strokeDashoffset = L * (1 - ease.inOut(k)); });
+  return p;
+}
+function shape(tag, attrs, t0, dur = .6, parent = svg) {
+  const s = el(tag, attrs, parent); s.style.opacity = 0;
+  at(t0, dur, k => s.style.opacity = ease.out(k));
+  return s;
+}
+function text(html, cls, x, y, t0, opts = {}) {
+  const d = document.createElement("div"); d.className = "t " + cls; d.innerHTML = html; txtEl.appendChild(d);
+  const w = opts.w || 1600; d.style.width = w + "px"; d.style.left = (x - w / 2) + "px"; d.style.top = y + "px";
+  if (opts.align) d.style.textAlign = opts.align;
+  d.style.opacity = 0;
+  at(t0, opts.dur || .8, k => { const e = ease.out(k); d.style.opacity = e; d.style.transform = `translateY(${(1 - e) * 18}px)`; });
+  return d;
+}
+function card(x, y, w, h, t0) {
+  const c = document.createElement("div"); c.className = "card"; Object.assign(c.style, { left: x + "px", top: y + "px", width: w + "px", height: h + "px", opacity: 0 });
+  document.getElementById("back").appendChild(c); at(t0, .7, k => { const e = ease.out(k); c.style.opacity = e; c.style.transform = `scale(${.94 + .06 * e})`; });
+  return c;
+}
+function rule(x, y, w, t0) {
+  const r = document.createElement("div"); r.className = "rule"; Object.assign(r.style, { left: (x - w / 2) + "px", top: y + "px", width: w + "px", transform: "scaleX(0)" });
+  txtEl.appendChild(r); at(t0, .8, k => r.style.transform = `scaleX(${ease.out(k)})`);
+}
+function group(x, y, s = 1) { return el("g", { transform: `translate(${x} ${y}) scale(${s})` }, svg); }
+function pop(g, x, y, s, t0, dur = .6) {
+  g.setAttribute("opacity", 0);
+  at(t0, dur, k => { const e = ease.out(k); g.setAttribute("opacity", e); g.setAttribute("transform", `translate(${x} ${y}) scale(${s * (.6 + .4 * e)})`); });
+}
+
+// ---------- icons (drawn around 0,0, ~100 units tall) ----------
+function treeIcon(g, t0, cls = "gr") {
+  path("M0 50 L0 5", "gd", t0, .6, g);
+  path("M0 5 C-45 5 -50 -45 -20 -55 C-15 -80 15 -80 20 -55 C50 -45 45 5 0 5 Z", cls, t0 + .3, 1.1, g);
+  shape("path", { d: "M0 5 C-45 5 -50 -45 -20 -55 C-15 -80 15 -80 20 -55 C50 -45 45 5 0 5 Z", class: "fillg" }, t0 + 1.0, .6, g);
+  path("M0 25 L-14 12 M0 15 L12 2", "gd", t0 + .6, .5, g);
+}
+function sproutIcon(g, t0, cls = "gr") {
+  path("M0 50 L0 0", "gd", t0, .5, g);
+  path("M0 10 C-30 10 -38 -15 -38 -25 C-15 -25 0 -12 0 10 Z", cls, t0 + .3, .7, g);
+  path("M0 0 C25 0 34 -22 34 -32 C12 -32 0 -20 0 0 Z", cls, t0 + .45, .7, g);
+  path("M-30 50 L30 50", "gd", t0, .5, g);
+}
+function leafIcon(g, t0) {
+  path("M-40 40 C-40 -20 0 -50 45 -45 C50 0 20 40 -40 40 Z", "gr", t0, 1.0, g);
+  path("M-40 40 C-10 10 10 -10 30 -28", "gr", t0 + .5, .7, g);
+}
+function buildingIcon(g, t0, cls = "ln") {          // pillared public building
+  path("M-55 -20 L0 -55 L55 -20 Z", cls, t0, .7, g);
+  path("M-50 -12 L50 -12 M-50 45 L50 45 M-60 55 L60 55", cls, t0 + .3, .6, g);
+  path("M-35 -5 L-35 40 M-12 -5 L-12 40 M12 -5 L12 40 M35 -5 L35 40", cls, t0 + .5, .6, g);
+}
+function personIcon(g, t0, cls = "ln", hat = false) {
+  path("M0 -45 m-16 0 a16 16 0 1 0 32 0 a16 16 0 1 0 -32 0", cls, t0, .6, g);
+  path("M-35 50 C-35 5 35 5 35 50", cls, t0 + .3, .7, g);
+  if (hat) path("M-24 -52 C-20 -78 20 -78 24 -52 M-30 -52 L30 -52", "gd", t0 + .5, .6, g);
+}
+function plotIcon(g, t0, w = 120, h = 80) {
+  path(`M${-w/2} ${-h/2} L${w/2} ${-h/2} L${w/2} ${h/2} L${-w/2} ${h/2} Z`, "ln", t0, 1.0, g);
+}
+function shipIcon(g, t0, cls = "ln") {
+  path("M-60 10 L60 10 L45 40 L-45 40 Z", cls, t0, .8, g);
+  path("M-35 10 L-35 -15 L10 -15 L10 10 M10 -5 L35 -5 L35 10", cls, t0 + .3, .7, g);
+  path("M-70 55 C-55 48 -40 62 -25 55 C-10 48 5 62 20 55 C35 48 50 62 65 55", cls, t0 + .5, .7, g);
+}
+function islandIcon(g, t0) {
+  path("M-65 40 C-40 20 40 20 65 40", "gd", t0, .7, g);
+  path("M-5 30 C-5 0 0 -25 10 -45", "gd", t0 + .2, .6, g);
+  path("M10 -45 C-15 -55 -35 -45 -40 -35 M10 -45 C30 -60 50 -50 55 -40 M10 -45 C0 -25 -10 -15 -20 -10 M10 -45 C25 -30 32 -18 35 -8", "gr", t0 + .5, .9, g);
+}
+function arrow(x1, y1, x2, y2, cls, t0, dur = .8) {
+  path(`M${x1} ${y1} L${x2} ${y2}`, cls, t0, dur);
+  const a = Math.atan2(y2 - y1, x2 - x1), s = 18;
+  path(`M${x2 - s * Math.cos(a - .5)} ${y2 - s * Math.sin(a - .5)} L${x2} ${y2} L${x2 - s * Math.cos(a + .5)} ${y2 - s * Math.sin(a + .5)}`, cls, t0 + dur - .1, .3);
+}
+
+// ---------- scenes ----------
+const S = {};
+
+// 1. What agroforestry is: trees and crops planted together in one farm
+S[1] = () => {
+  text("އެގްރޯފޮރެސްޓްރީ", "h1", 960, 120, 1.0);
+  rule(960, 248, 120, 1.4);
+  const px = 960, py = 600;
+  plotIcon(group(px, py, 3.6), 1.6, 120, 80);
+  const tree = group(px, py - 10, 1.5); treeIcon(tree, 2.4);
+  [[-300, 40], [300, 40], [-170, 110], [170, 110], [-330, -80], [330, -80]].forEach(([dx, dy], i) => {
+    const g = group(px + dx, py + dy, .95); sproutIcon(g, 3.4 + i * .25); });
+  text("އެއް ދަނޑެއްގައި ގަސްގަހާގެއްސާއި އެކި ބާވަތުގެ ދަނޑުގޮވާން އެކީގައި", "h2", 960, 860, 5.2);
+  text("ތިމާވެއްޓާ ރައްޓެހިގޮތެއްގައި ކުރާ ދަނޑުވެރިކަމުގެ ނިޒާމެއް", "h3 gold", 960, 935, 5.9);
+  return 12;
+};
+
+// 2. Eco-friendly, modern model farms
+S[2] = () => {
+  text("ނަމޫނާ ދަނޑުތަކެއް", "h1", 960, 120, 1.0);
+  rule(960, 248, 120, 1.4);
+  const items = [
+    { x: 1440, icon: leafIcon, t: "ތިމާވެއްޓާއި ރައްޓެހި" },
+    { x: 960, icon: (g, t) => { plotIcon(g, t, 110, 75); path("M-40 0 L-10 25 L40 -25", "gd", t + .8, .6, g); }, t: "ޒަމާނީ ފެންވަރު" },
+    { x: 480, icon: (g, t) => treeIcon(g, t), t: "ނަމޫނާ ދަނޑު" },
+  ];
+  items.forEach((it, i) => {
+    const t0 = 1.8 + i * 1.1;
+    card(it.x - 230, 340, 460, 470, t0);
+    const g = group(it.x, 520, 1.5); it.icon(g, t0 + .3);
+    text(it.t, "h3", it.x, 700, t0 + 1.0, { w: 440 });
+  });
+  text("ތިމާވެއްޓާއި ރައްޓެހިކޮށް ފަރުމާ ކުރެވިފައިވާ ދަނޑުތައް", "h2", 960, 880, 5.6);
+  return 11;
+};
+
+// 3. Sites between 2 and 4 hectares (size illustration)
+S[3] = () => {
+  text("ދަނޑުތަކުގެ ބޮޑުމިން", "h1", 960, 110, 1.0);
+  rule(960, 238, 120, 1.4);
+  const cx = 1240, cy = 600;
+  const r = shape("rect", { class: "ln fillc", rx: 6 }, 1.8, .4);
+  at(1.8, 3.2, k => { const e = ease.inOut(k), s = lerp(170, 300, e);   // area doubles: side x sqrt(2)
+    r.setAttribute("x", cx - s * 1.25); r.setAttribute("y", cy - s * .85); r.setAttribute("width", s * 2.5); r.setAttribute("height", s * 1.7); });
+  const inner = shape("rect", { x: cx - 212, y: cy - 145, width: 425, height: 289, rx: 6, class: "gd", "stroke-dasharray": "10 12" }, 2.0, .6);
+  const n = text("<span>2</span>", "num", 560, 400, 1.8, { w: 600 });
+  at(2.6, 2.6, k => { n.innerHTML = `2 <span class="gold">–</span> ${k < .99 ? (2 + 2 * ease.inOut(k)).toFixed(1).replace(/\.0$/, "") : 4}`; });
+  text("ހެކްޓަރު", "h1 gold", 560, 610, 2.2, { w: 600 });
+  text("2 ހެކްޓަރާއި 4 ހެކްޓަރާއި ދެމެދުގެ ބޮޑުމިން", "h3", 560, 760, 5.0, { w: 700 });
+  return 11;
+};
+
+// 4. Long-term trees together with short-term food crops
+S[4] = () => {
+  text("ދިގު މުއްދަތާއި ކުރު މުއްދަތު", "h1", 960, 110, 1.0);
+  rule(960, 238, 120, 1.4);
+  card(1010, 320, 620, 470, 1.8); card(290, 320, 620, 470, 2.6);
+  const g1 = group(1320, 520, 1.7); treeIcon(g1, 2.1);
+  const g2 = group(600, 540, 1.6); sproutIcon(g2, 2.9);
+  text("ދިގުމުއްދަތަކަށް ހެއްދޭ ބާވަތްތައް", "h3", 1320, 680, 3.2, { w: 600 });
+  text("ކުރުމުއްދަތެއްގައި ހެއްދޭ ކާނާގެ ބާވަތްތައް", "h3", 600, 680, 3.8, { w: 600 });
+  text("+", "numS gold", 960, 480, 3.4, { w: 200 });
+  text("ދިގުމުއްދަތަކަށް ކާނާ އަދި މުޑުވައްގަސް އުފެއްދުމަށް މަގުފަހި ވެގެންދާނެ", "h3 gold", 960, 880, 5.2);
+  return 11;
+};
+
+// 5. More local production, lower import spending (no figures)
+S[5] = () => {
+  text("ބޭރުން އެތެރެ ކުރުމަށް ކުރަން ޖެހޭ ޚަރަދު ކުޑަކުރެވިގެންދާނެ", "h2", 960, 130, 1.0);
+  rule(960, 230, 120, 1.4);
+  const base = 800;
+  // local production column (right, RTL first)
+  const gi = group(1300, 380, 1.3); islandIcon(gi, 1.8);
+  const b1 = shape("rect", { x: 1220, width: 160, rx: 10, class: "gr fillg" }, 2.6, .3);
+  at(2.6, 2.4, k => { const h = lerp(120, 330, ease.inOut(k)); b1.setAttribute("y", base - h); b1.setAttribute("height", h); });
+  arrow(1450, 760, 1450, 520, "gr", 3.4, 1.0);
+  text("ރާއްޖޭގައި އުފެއްދޭ މިންވަރު", "h3", 1300, 830, 3.0, { w: 520 });
+  // imports column (left)
+  const gs = group(620, 380, 1.1); shipIcon(gs, 2.0);
+  const b2 = shape("rect", { x: 540, width: 160, rx: 10, class: "ln fillc" }, 2.8, .3);
+  at(2.8, 2.4, k => { const h = lerp(330, 130, ease.inOut(k)); b2.setAttribute("y", base - h); b2.setAttribute("height", h); });
+  arrow(470, 520, 470, 760, "gd", 3.6, 1.0);
+  text("ބޭރުން އެތެރެކުރުން", "h3", 620, 830, 3.2, { w: 520 });
+  shape("path", { d: `M380 ${base} L1540 ${base}`, class: "gd" }, 2.4, .5);
+  return 10;
+};
+
+// 6. Run by councils with technical advice from the ministry
+S[6] = () => {
+  text("ކައުންސިލްތަކުން ހައްދަމުން ގެންދާނެ ދަނޑުތައް", "h1", 960, 110, 1.0);
+  rule(960, 250, 120, 1.4);
+  const nodes = [
+    { x: 1500, icon: g => personIcon(g, 1.9, "ln", true), t: "މިނިސްޓްރީގެ ފަންނީ ލަފާ", t0: 1.8 },
+    { x: 960, icon: g => buildingIcon(g, 3.0), t: "ކައުންސިލް", t0: 2.9 },
+    { x: 420, icon: g => { personIcon(group(390, 520, 1.1), 4.1, "gr"); personIcon(group(455, 530, 1.1), 4.3, "gr"); }, t: "ރަށުގެ ދަނޑުވެރިން", t0: 4.0 },
+  ];
+  nodes.forEach(n => {
+    card(n.x - 200, 380, 400, 380, n.t0);
+    if (n.x !== 420) n.icon(group(n.x, 530, 1.4));
+    else n.icon();
+    text(n.t, "h3", n.x, 660, n.t0 + .8, { w: 400 });
+  });
+  arrow(1295, 570, 1170, 570, "gd", 2.7, .6);
+  arrow(755, 570, 630, 570, "gd", 3.8, .6);
+  text("ރައްކާތެރިކަމާއި އެކު ދަނޑުވެރިކަން ކުރުމުގެ ފަންނީ މަޢުލޫމާތު", "h2", 960, 860, 5.4);
+  return 11;
+};
+
+// 7. 400,000+ trees towards the 5 Million Trees Programme (project target)
+S[7] = () => {
+  const pill = document.createElement("div"); pill.className = "pill"; pill.textContent = "މަޝްރޫޢުގެ ލަނޑުދަނޑި"; txtEl.appendChild(pill);
+  pill.style.opacity = 0; at(1.0, .7, k => pill.style.opacity = ease.out(k));
+  requestAnimationFrame(() => { pill.style.left = (960 - pill.offsetWidth / 2) + "px"; pill.style.top = "150px"; });
+  const n = text("0", "num", 960, 290, 1.4, { w: 1200 });
+  at(1.6, 3.0, k => { const v = Math.round(400000 * ease.out(k) / 1000) * 1000; n.innerHTML = v.toLocaleString("en-US") + (k >= 1 ? '<span class="gold">+</span>' : ""); });
+  text("ހަތަރުލައްކަ އަށްވުރެ ގިނަ ގަސް", "h1", 960, 500, 3.2);
+  text("5 މިލިއަން ގަސް އިންދުމުގެ ޕްރޮގްރާމަށް", "h2 gold", 960, 640, 4.0);
+  // seedlings spreading outward
+  const r = rng(3);
+  for (let i = 0; i < 26; i++) {
+    const a = (i / 26) * Math.PI * 2 + r() * .2, rad = 430 + r() * 120;
+    const x = 960 + Math.cos(a) * rad * 1.55, y = 560 + Math.sin(a) * rad * .62;
+    if (y > 120 && y < 1020 && (x < 520 || x > 1400 || y > 900)) { const g = group(x, y, .45); sproutIcon(g, 4.6 + (i % 9) * .15); }
+  }
+  return 10;
+};
+
+// 8. Closing statement
+S[8] = () => {
+  const g = group(960, 330, 2.0); treeIcon(g, 1.0);
+  [[-260, 60], [260, 60], [-460, 90], [460, 90]].forEach(([dx, dy], i) => { const s = group(960 + dx, 330 + dy, .9); sproutIcon(s, 2.0 + i * .2); });
+  path("M560 450 L1360 450", "gd", 1.6, 1.2);
+  text("ތިމާވެއްޓާއި ރައްޓެހި ޒަމާނީ ދަނޑުވެރިކަމަކަށް", "h1", 960, 540, 3.0);
+  text("ދަނޑުވެރިކަމުގެ ސިނާޢަތް ދެމެހެއްޓެނިވި ގޮތެއްގައި ކުރިއަރައި", "h2", 960, 720, 4.0);
+  return 10;
+};
+
+window.DURATION = S[ID]();
+window.render = function (t) { for (const a of A) a.f(prog(t, a.t0, a.dur)); };
+window.render(0);
+</script>
+</body></html>
