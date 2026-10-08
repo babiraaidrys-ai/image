@@ -1,0 +1,68 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../lib/style.css">
+<style>
+  #stage { background: radial-gradient(120% 120% at 50% 40%, #12463E 0%, #0C3029 45%, #071C18 100%); }
+  #grid { position: absolute; inset: 0; opacity: .5;
+          background-image: linear-gradient(rgba(95,224,255,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(95,224,255,.07) 1px, transparent 1px);
+          background-size: 80px 80px; mask-image: radial-gradient(70% 70% at 50% 50%, #000 30%, transparent 100%); }
+  #vig { position: absolute; inset: 0; background: radial-gradient(80% 80% at 50% 50%, transparent 55%, rgba(0,0,0,.45) 100%); }
+  svg { position: absolute; left: 0; top: 0; overflow: visible; }
+  .gd { fill: none; stroke: #E7B54B; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px rgba(231,181,75,.6)); }
+  .gr { fill: none; stroke: #8FE07A; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px rgba(143,224,122,.6)); }
+  .fillg { fill: rgba(143,224,122,.18); }
+  .t { position: absolute; left: 160px; width: 1600px; color: #fff; direction: rtl; text-align: center; white-space: nowrap; }
+  .h0 { font: 700 96px/1.35 "MV MAG Round", "MV Typewriter"; text-shadow: 0 6px 30px rgba(0,0,0,.45); }
+  .h2 { font: 700 54px/1.5 "MV Typewriter"; color: #E7B54B; }
+  .rule { position: absolute; left: 900px; width: 120px; height: 5px; background: #E7B54B; border-radius: 3px; transform: scaleX(0); }
+  #logo { position: absolute; width: 760px; left: 580px; top: 560px; opacity: 0; }
+</style></head>
+<body><div id="stage"><div id="grid"></div><div id="vig"></div>
+<svg id="svg" width="1920" height="1080"></svg><div id="txt"></div>
+<img id="logo" src="../assets/ministry_logo_white.png"></div>
+<script src="../lib/core.js"></script>
+<script>
+const ID = new URLSearchParams(location.search).get("id") || "intro";
+const svg = document.getElementById("svg"), txtEl = document.getElementById("txt"), A = [];
+const at = (t0, dur, f) => A.push({ t0, dur, f });
+function path(d, cls, t0, dur, g) { const p = el("path", { d, class: cls }, g); const L = p.getTotalLength();
+  p.style.strokeDasharray = L; p.style.strokeDashoffset = L; at(t0, dur, k => p.style.strokeDashoffset = L * (1 - ease.inOut(k))); return p; }
+function text(s, cls, y, t0) { const d = document.createElement("div"); d.className = "t " + cls; d.textContent = s; d.style.top = y + "px"; d.style.opacity = 0;
+  txtEl.appendChild(d); at(t0, 1.0, k => { const e = ease.out(k); d.style.opacity = e; d.style.transform = `translateY(${(1 - e) * 20}px)`; }); }
+function rule(y, t0) { const r = document.createElement("div"); r.className = "rule"; r.style.top = y + "px"; txtEl.appendChild(r); at(t0, .8, k => r.style.transform = `scaleX(${ease.out(k)})`); }
+function tree(x, y, s, t0) {
+  const g = el("g", { transform: `translate(${x} ${y}) scale(${s})` }, svg);
+  path("M0 50 L0 5", "gd", t0, .6, g);
+  const c = "M0 5 C-45 5 -50 -45 -20 -55 C-15 -80 15 -80 20 -55 C50 -45 45 5 0 5 Z";
+  path(c, "gr", t0 + .3, 1.1, g); const f = el("path", { d: c, class: "fillg" }, g); f.style.opacity = 0; at(t0 + 1.0, .6, k => f.style.opacity = k);
+  path("M0 25 L-14 12 M0 15 L12 2", "gd", t0 + .6, .5, g);
+}
+function sprout(x, y, s, t0) {
+  const g = el("g", { transform: `translate(${x} ${y}) scale(${s})` }, svg);
+  path("M0 50 L0 0", "gd", t0, .5, g);
+  path("M0 10 C-30 10 -38 -15 -38 -25 C-15 -25 0 -12 0 10 Z", "gr", t0 + .3, .7, g);
+  path("M0 0 C25 0 34 -22 34 -32 C12 -32 0 -20 0 0 Z", "gr", t0 + .45, .7, g);
+}
+let DUR;
+if (ID === "intro") {
+  tree(960, 230, 1.7, 1.0);
+  [[-180, 40], [180, 40], [-330, 70], [330, 70]].forEach(([dx, dy], i) => sprout(960 + dx, 230 + dy, .8, 1.8 + i * .2));
+  path("M600 340 L1320 340", "gd", 1.4, 1.2, svg);
+  text("ފަސް މިލިއަން ގަސް އިންދުމުގެ ޕްރޮގޮރާމްގެ ދަށުން", "h2", 430, 2.6);
+  text("10 ރަށެއްގައި އެގްރޯފޮރެސްޓްރީ ދަނޑު ޤާއިމްކުރުން", "h0", 540, 3.2);
+  rule(720, 4.0);
+  DUR = 10;
+} else {
+  tree(960, 170, 1.4, 1.0);
+  path("M640 260 L1280 260", "gd", 1.4, 1.2, svg);
+  text("ފަސް މިލިއަން ގަސް އިންދުމުގެ ޕްރޮގޮރާމްގެ ދަށުން", "h2", 300, 2.0);
+  text("10 ރަށެއްގައި އެގްރޯފޮރެސްޓްރީ ދަނޑު ޤާއިމްކުރުން", "h0", 390, 2.6);
+  const logo = document.getElementById("logo");
+  at(3.6, 1.2, k => { const e = ease.out(k); logo.style.opacity = e; logo.style.transform = `translateY(${(1 - e) * 20}px)`; });
+  DUR = 10;
+}
+window.DURATION = DUR;
+window.render = t => { for (const a of A) a.f(prog(t, a.t0, a.dur)); };
+window.render(0);
+</script>
+</body></html>
