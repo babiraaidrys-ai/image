@@ -56,15 +56,15 @@ shallows.width = Math.ceil(1.6 * TX.ppd); shallows.height = Math.ceil(8.2 * TX.p
 const FULL = [3.25, 73.2, 118];
 const CAM = [
   [0, 3.25, 73.2, 108], [3.6, ...FULL],
-  [5.6, 5.48, 73.0, 330], [7.9, 5.48, 73.0, 330],            // R. Inguraidhoo
-  [10.6, 0.40, 73.28, 640], [17.2, 0.40, 73.28, 640],        // Huvadhu: Gemanafushi, Hoandeddhoo, Fiyoaree
-  [19.8, 2.96, 73.48, 520], [21.9, 2.96, 73.48, 520],        // M. Veyvah
-  [24.0, 4.95, 73.40, 420], [26.1, 4.95, 73.40, 420],        // K. Kaashidhoo
-  [28.0, 3.94, 73.44, 420], [30.1, 3.94, 73.44, 420],        // K. Maafushi
-  [32.6, 6.76, 73.10, 330], [34.7, 6.76, 73.10, 330],        // HA. Baarah
-  [37.4, 2.02, 73.45, 520], [39.5, 2.02, 73.45, 520],        // L. Isdhoo
-  [41.6, 4.40, 73.55, 420], [43.7, 4.40, 73.55, 420],        // K. Thulusdhoo
-  [45.9, ...FULL],
+  [5.6, 6.76, 73.10, 330], [7.9, 6.76, 73.10, 330],          // HA. Baarah
+  [9.6, 5.48, 73.00, 330], [11.9, 5.48, 73.00, 330],         // R. Inguraidhoo
+  [13.6, 4.95, 73.40, 420], [15.9, 4.95, 73.40, 420],        // K. Kaashidhoo
+  [17.6, 3.94, 73.44, 420], [19.9, 3.94, 73.44, 420],        // K. Maafushi
+  [21.4, 4.40, 73.55, 420], [23.7, 4.40, 73.55, 420],        // K. Thulusdhoo
+  [25.6, 2.96, 73.48, 520], [27.9, 2.96, 73.48, 520],        // M. Veyvah
+  [29.6, 2.02, 73.45, 520], [31.9, 2.02, 73.45, 520],        // L. Isdhoo
+  [34.0, 0.40, 73.28, 640], [40.8, 0.40, 73.28, 640],        // Huvadhu: Gemanafushi, Hoandeddhoo, Fiyoaree
+  [43.0, ...FULL],
 ];
 function camera(t) {
   let i = 0; while (i < CAM.length - 1 && t >= CAM[i + 1][0]) i++;
@@ -77,9 +77,9 @@ function camera(t) {
 const proj = (lat, lon, c) => [CX + (lon - c[1]) * c[2], CY + (c[0] - lat) * c[2]];
 
 // ---------- islands, outlines, labels ----------
-const SIDE = ["r", "r", "l", "br", "r", "r", "r", "r", "r", "r"];
-const REVEAL = [5.9, 10.9, 13.1, 15.3, 20.1, 24.3, 28.3, 32.9, 37.7, 41.9];
-const EXIT = [7.9, 17.2, 17.2, 17.2, 21.9, 26.1, 30.1, 34.7, 39.5, 43.7];
+const SIDE = ["r", "r", "r", "r", "r", "r", "r", "r", "l", "br"];
+const REVEAL = [5.9, 9.9, 13.9, 17.9, 21.7, 25.9, 29.9, 34.3, 36.5, 38.7];
+const EXIT = [7.9, 11.9, 15.9, 19.9, 23.7, 27.9, 31.9, 40.8, 40.8, 40.8];
 const labels = document.getElementById("labels");
 const isl = MV.islands.map(([en, dv, lat, lon], i) => {
   const d = document.createElement("div"); d.className = "lbl"; d.textContent = dv; labels.appendChild(d);
@@ -92,8 +92,8 @@ const atollLen = MV.atolls.map(a => a.reduce((s, p, i) => i ? s + Math.hypot(p[0
 
 const list = document.getElementById("list");
 const rows = isl.map(o => { const d = document.createElement("div"); d.className = "row"; d.innerHTML = `<i></i>${o.dv}`; list.appendChild(d); return d; });
-const T_TITLE = 46.3;
-window.DURATION = 54;
+const T_TITLE = 43.4;
+window.DURATION = 51;
 
 function pathGeo(rings, c) { ctx.beginPath(); rings.forEach(r => r.forEach((p, i) => { const [x, y] = proj(p[1], p[0], c); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); })); }
 
@@ -132,7 +132,7 @@ window.render = function (t) {
     if (k > 0) {
       const p = ((t - o.t0) % 1.1) / 1.1, live = t < o.t0 + 2.2;
       if (live) { ctx.beginPath(); ctx.arc(x, y, 10 + 24 * ease.out(p), 0, 7); ctx.strokeStyle = `rgba(231,181,75,${(1 - p) * .9})`; ctx.lineWidth = 3; ctx.stroke(); }
-      const r = (6 + 5 * k) * (t > 43.7 ? lerp(1, .8, prog(t, 43.7, 2)) : 1);
+      const r = (6 + 5 * k) * (t > 40.8 ? lerp(1, .8, prog(t, 40.8, 2)) : 1);
       ctx.beginPath(); ctx.arc(x, y, r + 3.5, 0, 7); ctx.fillStyle = "#fff"; ctx.fill();
       ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fillStyle = "#E7B54B"; ctx.fill();
     }
